@@ -4,6 +4,8 @@
 
 A bash script that use chatGPT api
 
+[![asciicast](https://asciinema.org/a/567606.svg)](https://asciinema.org/a/567606)
+
 ## Dotenv
 
 Create a .env file using .env.example
