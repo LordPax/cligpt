@@ -30,3 +30,8 @@ cligpt "Hello, how are you ?"
 echo Hello, how are you ? | cligpt -
 cligpt -l
 ```
+
+## Integration with tmux
+```
+bind H new-window "cligpt" \; rename-window "cligpt"
+```
