@@ -23,4 +23,10 @@ Option :
 -l or --list ........................... List all available model
 -m or --model <model> .................. Select model (default : gpt-3.5-turbo)
 -t or --temp <temperature> ............. Set temperature (default : 0.7))
+
+Example :
+cligpt # Interactive mode with a chat history
+cligpt "Hello, how are you ?"
+echo Hello, how are you ? | cligpt -
+cligpt -l
 ```

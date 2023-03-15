@@ -17,24 +17,30 @@ function echo_err() {
 
 function input() {
     [ "$1" == "" ] && echo_err $"input : prompt is needed" && exit 1
+
     local input=""
     read -r -p "$1" input
 
     [ "$input" == "" ] && input "$1"
-    # [[ "$input" =~ quit|q ]] && echo "Exit interactive mode" && exit 0
 
     echo "$input"
 }
 
 function helpFunc() {
-    echo -e $"Usage : $(basename $0) [option] [text]
+    echo -e $"Usage : $(basename "$0") [option] [text]
 
 Option :
 -h or --help ........................... Show help
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
 -m or --model <model> .................. Select model (default : $model)
--t or --temp <temperature> ............. Set temperature (default : $temp))"
+-t or --temp <temperature> ............. Set temperature (default : $temp))
+
+Example :
+$(basename "$0") # Interactive mode with a chat history
+$(basename "$0") \"Hello, how are you ?\"
+echo "Hello, how are you ?" | $(basename "$0") -
+$(basename "$0") -l"
 
     exit 0
 }
