@@ -1,0 +1,146 @@
+#!/bin/bash
+
+version="v0.1.0"
+model="gpt-3.5-turbo"
+text=""
+api="https://api.openai.com/v1"
+temp=0.7
+dotenv="$(dirname $(readlink -f $0))/.env"
+listModelVar=0
+declare chatHistory
+
+# echo_err <msg>
+function echo_err() {
+    [ "$1" == "" ] && exit 1
+    echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
+}
+
+function input() {
+    [ "$1" == "" ] && echo_err $"input : prompt is needed" && exit 1
+    local input=""
+    read -r -p "$1" input
+
+    [ "$input" == "" ] && input "$1"
+    # [[ "$input" =~ quit|q ]] && echo "Exit interactive mode" && exit 0
+
+    echo "$input"
+}
+
+function helpFunc() {
+    echo -e $"Usage : $(basename $0) [option] [text]
+
+Option :
+-h or --help ........................... Show help
+-v or --version ........................ Show version
+-l or --list ........................... List all available model
+-m or --model <model> .................. Select model (default : $model)
+-t or --temp <temperature> ............. Set temperature (default : $temp))"
+
+    exit 0
+}
+
+function verification() {
+    [ "$(which jq 2> /dev/null)" == "" ] && echo_err "\"jq\" is required" && exit 1
+    [ "$API_KEY" == "" ] && echo_err "API_KEY is needed" && exit 1
+    [ "$model" == "" ] && echo_err "Model is needed" && exit 1
+    [ "$temp" == "" ] && echo_err "Temperature is needed" && exit 1
+}
+
+# readDotenv <env>
+function readDotenv() {
+    ([ "$1" == "" ] || [ ! -f "$1" ]) \
+        && echo_err "Dotenv file not found" && exit 1
+
+    local k
+    local v
+
+    while read -r var; do
+        [ "${var:0:1}" = "#" ] && continue
+        k=${var%=*}
+        v=${var#*=}
+        [ -n "$k" ] && export "$k=$v"
+    done < "$1"
+}
+
+# sendRequest <text>
+function sendRequest() {
+    [ "$1" == "" ] && echo_err "sendRequest : Parameter is required" && exit 1
+
+    chatHistory+=("{\"role\":\"user\",\"content\":\"$1\"}")
+    local nbElem=${#chatHistory[@]}
+    local data="{\"model\":\"$model\",\"messages\":["
+    data="${data}${chatHistory[0]}"
+
+    if [ "$nbElem" -gt 1 ]; then
+        for i in $(seq 1 $(( nbElem-1 ))); do
+            data+=",${chatHistory[$i]}"
+        done
+    fi
+
+    data+="],\"temperature\":$temp}"
+
+    local result=$(curl -s \
+        -X POST "$api/chat/completions" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $API_KEY" \
+        -d "$data" | jq -c '.choices[0].message'
+    )
+
+    chatHistory+=("$result")
+
+    local role=$(echo "$result" | jq -r '.role')
+    local content=$(echo "$result" | jq -r '.content')
+
+    echo "$role> $content"
+}
+
+function listModel() {
+    curl -s "$api/models" \
+        -H "Authorization: Bearer $API_KEY" | \
+        jq -r '.data[].id'
+}
+
+function interactiveMode() {
+    local prompt="user> "
+    local text=""
+
+    while true; do
+        text=$(input "$prompt")
+        sendRequest "$text"
+    done
+}
+
+for i in $(seq 1 $#); do
+    case $1 in
+        -h | --help)
+            helpFunc;;
+        -v | --version)
+            echo $version
+            exit 0;;
+        -l | --list)
+            listModelVar=1;;
+        -m | --model)
+            model=$2
+            shift;;
+        -t | --temp)
+            temp=$2
+            shift;;
+        "") ;;
+        -)
+            text=$(cat /dev/stdin)
+            break;;
+        -*)
+            echo_err $"Unknown parameter \"$1\""
+            exit 1;;
+        *)
+            text=$1
+            shift
+    esac
+    shift
+done
+
+readDotenv "$dotenv"
+verification
+[ $listModelVar -eq 1 ] && listModel && exit 0
+
+[ "$text" == "" ] && interactiveMode || sendRequest "$text"
