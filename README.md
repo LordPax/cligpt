@@ -29,7 +29,7 @@ Option :
 Example :
 cligpt # Interactive mode with a chat history
 cligpt "Hello, how are you ?"
-echo Hello, how are you ? | cligpt -
+echo "Hello, how are you ?" | cligpt -
 cligpt -l
 ```
 

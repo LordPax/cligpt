@@ -39,7 +39,7 @@ Option :
 Example :
 $(basename "$0") # Interactive mode with a chat history
 $(basename "$0") \"Hello, how are you ?\"
-echo "Hello, how are you ?" | $(basename "$0") -
+echo \"Hello, how are you ?\" | $(basename "$0") -
 $(basename "$0") -l"
 
     exit 0
