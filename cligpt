@@ -19,7 +19,7 @@ function input() {
     [ "$1" == "" ] && echo_err $"input : prompt is needed" && exit 1
 
     local input=""
-    read -er -p "$1" input
+    read -r -p "$1" input
 
     [ "$input" == "" ] && input "$1"
 
@@ -98,7 +98,7 @@ function sendRequest() {
     local role=$(echo "$result" | jq -r '.role')
     local content=$(echo "$result" | jq -r '.content')
 
-    echo -e "\n$role> $content" | bat -p -l md
+    echo $'\n\e[31m'"$role"$'>\e[0m '"$content" | bat -p -l md
 }
 
 function listModel() {
@@ -110,7 +110,7 @@ function listModel() {
 function interactiveMode() {
     while true; do
         printf "\n"
-        sendRequest "$(input "user> ")"
+        sendRequest "$(input $'\e[34muser>\e[0m ')"
     done
 }
 
