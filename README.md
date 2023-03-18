@@ -4,9 +4,6 @@
 
 A bash script that use chatGPT api
 
-[![asciicast](https://asciinema.org/a/568168.svg)](https://asciinema.org/a/568168)
-[![asciicast](https://asciinema.org/a/568170.svg)](https://asciinema.org/a/568170)
-
 ## Dotenv
 
 Create a .env file using .env.example
@@ -38,3 +35,8 @@ cligpt -l
 ```
 bind H new-window "cligpt" \; rename-window "cligpt"
 ```
+
+## Exemple
+
+[![asciicast](https://asciinema.org/a/568168.svg)](https://asciinema.org/a/568168)
+[![asciicast](https://asciinema.org/a/568170.svg)](https://asciinema.org/a/568170)
