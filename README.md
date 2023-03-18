@@ -4,7 +4,8 @@
 
 A bash script that use chatGPT api
 
-[![asciicast](https://asciinema.org/a/567606.svg)](https://asciinema.org/a/567606)
+[![asciicast](https://asciinema.org/a/568168.svg)](https://asciinema.org/a/568168)
+[![asciicast](https://asciinema.org/a/568170.svg)](https://asciinema.org/a/568170)
 
 ## Dotenv
 
