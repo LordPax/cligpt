@@ -69,9 +69,10 @@ function readDotenv() {
     done < "$1"
 }
 
-# sendRequest <text>
+# sendRequest <text> [format]
 function sendRequest() {
     [ "$1" == "" ] && echo_err "sendRequest : Parameter is required" && exit 1
+    local format=$([ "$2" == "" ] && echo 0 || echo $2)
 
     chatHistory+=("{\"role\":\"user\",\"content\":\"$1\"}")
     local nbElem=${#chatHistory[@]}
@@ -98,7 +99,8 @@ function sendRequest() {
     local role=$(echo "$result" | jq -r '.role')
     local content=$(echo "$result" | jq -r '.content')
 
-    echo $'\n\e[31m'"$role"$'>\e[0m '"$content" | bat -p -l md
+    [ "$format" -eq 1 ] && echo -e "\n\e[31m$role>\e[0m"
+    echo "$content" | bat -p -l md
 }
 
 function listModel() {
@@ -110,7 +112,7 @@ function listModel() {
 function interactiveMode() {
     while true; do
         printf "\n"
-        sendRequest "$(input $'\e[34muser>\e[0m ')"
+        sendRequest "$(input $'\e[34muser>\e[0m ')" 1
     done
 }
 
