@@ -19,7 +19,7 @@ function input() {
     [ "$1" == "" ] && echo_err $"input : prompt is needed" && exit 1
 
     local input=""
-    read -r -p "$1" input
+    read -er -p "$1" input
 
     [ "$input" == "" ] && input "$1"
 
@@ -34,7 +34,7 @@ Option :
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
 -m or --model <model> .................. Select model (default : $model)
--t or --temp <temperature> ............. Set temperature (default : $temp))
+-t or --temp <temperature> ............. Set temperature (default : $temp)
 
 Example :
 $(basename "$0") # Interactive mode with a chat history
@@ -46,7 +46,8 @@ $(basename "$0") -l"
 }
 
 function verification() {
-    [ "$(which jq 2> /dev/null)" == "" ] && echo_err "\"jq\" is required" && exit 1
+    [ "$(which jq 2> /dev/null)" == "" ] && echo_err "\"jq\" is required for reading json" && exit 1
+    [ "$(which bat 2> /dev/null)" == "" ] && echo_err "\"bat\" is required for syntax highligting" && exit 1
     [ "$API_KEY" == "" ] && echo_err "API_KEY is needed" && exit 1
     [ "$model" == "" ] && echo_err "Model is needed" && exit 1
     [ "$temp" == "" ] && echo_err "Temperature is needed" && exit 1
@@ -97,7 +98,7 @@ function sendRequest() {
     local role=$(echo "$result" | jq -r '.role')
     local content=$(echo "$result" | jq -r '.content')
 
-    echo "$role> $content"
+    echo -e "\n$role> $content" | bat -p -l md
 }
 
 function listModel() {
@@ -108,6 +109,7 @@ function listModel() {
 
 function interactiveMode() {
     while true; do
+        printf "\n"
         sendRequest "$(input "user> ")"
     done
 }

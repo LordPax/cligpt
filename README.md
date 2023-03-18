@@ -24,7 +24,7 @@ Option :
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
 -m or --model <model> .................. Select model (default : gpt-3.5-turbo)
--t or --temp <temperature> ............. Set temperature (default : 0.7))
+-t or --temp <temperature> ............. Set temperature (default : 0.7)
 
 Example :
 cligpt # Interactive mode with a chat history
