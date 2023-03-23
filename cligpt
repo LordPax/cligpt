@@ -1,11 +1,15 @@
 #!/bin/bash
 
-version="v0.1.0"
+version="v0.2.0"
 model="gpt-3.5-turbo"
 text=""
+systemText=""
 api="https://api.openai.com/v1"
 temp=0.7
-dotenv="$(dirname $(readlink -f $0))/.env"
+config="${HOME}/.config/cligpt"
+dotenv="${config}/.env"
+historyPath="${config}/history"
+logPath="${config}/log"
 listModelVar=0
 declare chatHistory
 
@@ -15,15 +19,26 @@ function echo_err() {
     echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
 }
 
+# echo_log <msg>
+# Log message for test purpose
+function echo_log() {
+    [ "$1" == "" ] && exit 1
+    local date=$(date "+%Y-%m-%d %H:%M:%S")
+    echo -e "[$date] : $1" >> "$logPath"
+}
+
 function input() {
     [ "$1" == "" ] && echo_err $"input : prompt is needed" && exit 1
 
-    local input=""
-    read -r -p "$1" input
+    local inputText=""
+    exec 3<&0 # sauvegarde de l'entrée standard
+    exec < /dev/tty # redirection de l'entrée vers le terminal
+    read -r -p "$1" inputText
+    exec 0<&3 # restauration de l'entrée standard
 
-    [ "$input" == "" ] && input "$1"
+    [ "$inputText" == "" ] && input "$1"
 
-    echo "$input"
+    echo "$inputText"
 }
 
 function helpFunc() {
@@ -35,14 +50,40 @@ Option :
 -l or --list ........................... List all available model
 -m or --model <model> .................. Select model (default : $model)
 -t or --temp <temperature> ............. Set temperature (default : $temp)
+-s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
+-c or --clear .......................... Clear history
+-L or --list-history ................... List history
 
 Example :
 $(basename "$0") # Interactive mode with a chat history
 $(basename "$0") \"Hello, how are you ?\"
-echo \"Hello, how are you ?\" | $(basename "$0") -
 $(basename "$0") -l"
 
     exit 0
+}
+
+function initConfig() {
+    [ ! -d "$config" ] && mkdir "$config" && echo "Config are generated"
+    [ ! -f "$dotenv" ] && echo "API_KEY=" > "$dotenv" && echo "Dotenv file is generated"
+    [ ! -f "$historyPath" ] && touch "$historyPath"
+}
+
+# saveHistory <text>
+function saveHistory() {
+    [ ! -f "$historyPath" ] && echo_err "saveHistory : History file not found" && exit 1
+    [ "$1" == "" ] && echo_err "saveHistory : Parameter is required" && return 1
+    [ "$1" == "null" ] && return 1
+
+    chatHistory+=("$1")
+    echo "$1" >> "$historyPath"
+}
+
+function loadHistory() {
+    [ ! -f "$historyPath" ] && echo_err "loadHistory : History file not found" && exit 1
+
+    while read -r line; do
+        chatHistory+=("$line")
+    done < "$historyPath"
 }
 
 function verification() {
@@ -53,10 +94,8 @@ function verification() {
     [ "$temp" == "" ] && echo_err "Temperature is needed" && exit 1
 }
 
-# readDotenv <env>
 function readDotenv() {
-    ([ "$1" == "" ] || [ ! -f "$1" ]) \
-        && echo_err "Dotenv file not found" && exit 1
+    [ ! -f "$dotenv" ] && echo_err "readDotenv : Dotenv file not found" && exit 1
 
     local k
     local v
@@ -66,7 +105,7 @@ function readDotenv() {
         k=${var%=*}
         v=${var#*=}
         [ -n "$k" ] && export "$k=$v"
-    done < "$1"
+    done < "$dotenv"
 }
 
 # sendRequest <text> [format]
@@ -74,7 +113,8 @@ function sendRequest() {
     [ "$1" == "" ] && echo_err "sendRequest : Parameter is required" && exit 1
     local format=$([ "$2" == "" ] && echo 0 || echo $2)
 
-    chatHistory+=("{\"role\":\"user\",\"content\":\"$1\"}")
+    local content=$(echo -n "$1" | jq -Rs .)
+    saveHistory "{\"role\":\"user\",\"content\":$content}"
     local nbElem=${#chatHistory[@]}
     local data="{\"model\":\"$model\",\"messages\":["
     data+="${chatHistory[0]}"
@@ -94,7 +134,7 @@ function sendRequest() {
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    chatHistory+=("$result")
+    saveHistory "$result"
 
     local role=$(echo "$result" | jq -r '.role')
     local content=$(echo "$result" | jq -r '.content')
@@ -131,9 +171,17 @@ for i in $(seq 1 $#); do
         -t | --temp)
             temp=$2
             shift;;
-        -)
-            text=$(cat /dev/stdin)
-            break;;
+        -c | --clear)
+            echo -n "" > "$historyPath"
+            exit 0;;
+        -L | --list-history)
+            bat -p -l json "$historyPath"
+            exit 0;;
+        -s | --system)
+            systemText=$([ "$2" == "-" ] && cat /dev/stdin || echo "$2")
+            content=$(echo -n "$systemText" | jq -Rs .)
+            saveHistory "{\"role\":\"system\",\"content\":$content}"
+            shift;;
         "") ;;
         -*)
             echo_err $"Unknown parameter \"$1\""
@@ -145,7 +193,13 @@ for i in $(seq 1 $#); do
     shift
 done
 
-readDotenv "$dotenv"
+initConfig
+loadHistory
+readDotenv
 verification
 [ $listModelVar -eq 1 ] && listModel && exit 0
-[ "$text" == "" ] && interactiveMode || sendRequest "$text"
+if [ "$text" == "" ]; then
+    interactiveMode
+else
+    sendRequest "$text"
+fi
