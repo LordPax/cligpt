@@ -48,9 +48,11 @@ Option :
 -L or --list-history ................... List history
 
 Example :
-cligpt # Interactive mode with a chat history
-cligpt "Hello, how are you ?"
-cligpt -l
+cligpt # Interactive mode
+cligpt "some prompt with role user"
+cat somefile.txt | cligpt -s - # Instruction mode
+cat somefile.txt | cligpt -s - "some prompt with role user"
+cat somefile.txt | cligpt -s "some prompt with role system" "some prompt with role user"
 ```
 
 ## Integration with tmux

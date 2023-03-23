@@ -55,9 +55,11 @@ Option :
 -L or --list-history ................... List history
 
 Example :
-$(basename "$0") # Interactive mode with a chat history
-$(basename "$0") \"Hello, how are you ?\"
-$(basename "$0") -l"
+$(basename "$0") # Interactive mode
+$(basename "$0") \"some prompt with role user\"
+cat somefile.txt | $(basename "$0") -s - # Instruction mode
+cat somefile.txt | $(basename "$0") -s - \"some prompt with role user\"
+cat somefile.txt | $(basename "$0") -s \"some prompt with role system\" \"some prompt with role user\""
 
     exit 0
 }
