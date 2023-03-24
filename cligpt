@@ -59,7 +59,7 @@ $(basename "$0") # Interactive mode
 $(basename "$0") \"some prompt with role user\"
 cat somefile.txt | $(basename "$0") -s - # Instruction mode
 cat somefile.txt | $(basename "$0") -s - \"some prompt with role user\"
-cat somefile.txt | $(basename "$0") -s \"some prompt with role system\" \"some prompt with role user\""
+$(basename "$0") -s \"some prompt with role system\" \"some prompt with role user\""
 
     exit 0
 }

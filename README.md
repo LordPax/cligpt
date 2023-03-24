@@ -52,7 +52,7 @@ cligpt # Interactive mode
 cligpt "some prompt with role user"
 cat somefile.txt | cligpt -s - # Instruction mode
 cat somefile.txt | cligpt -s - "some prompt with role user"
-cat somefile.txt | cligpt -s "some prompt with role system" "some prompt with role user"
+cligpt -s "some prompt with role system" "some prompt with role user"
 ```
 
 ## Integration with tmux
