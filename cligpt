@@ -136,8 +136,9 @@ function sendRequest() {
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    saveHistory "$result"
+    [ "$result" == "null" ] && echo_err "Something wrong with API" && exit 1
 
+    saveHistory "$result"
     local role=$(echo "$result" | jq -r '.role')
     local content=$(echo "$result" | jq -r '.content')
 

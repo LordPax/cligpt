@@ -26,7 +26,7 @@ cd cligpt
 ./cligpt
 ```
 
-4. Add your API key to `~/.config/cligpt/.env`:
+3. Add your API key to `~/.config/cligpt/.env`:
 
 ```bash
 API_KEY=your-api-key
@@ -66,10 +66,6 @@ bind H new-window "cligpt" \; rename-window "cligpt"
 ### How do I get my ChatGPT API key?
 
 To get a ChatGPT API key, you need to sign up on the OpenAI website and follow the instructions to create an account and obtain an API key.
-
-### The script is not working, what should I do?
-
-Make sure you have correctly installed all dependencies. If the problem persists, check that you are using the latest version of the script and report the issue on the project's GitHub page.
 
 ## Exemple
 
