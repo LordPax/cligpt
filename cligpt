@@ -74,7 +74,7 @@ function initConfig() {
 function saveHistory() {
     [ ! -f "$historyPath" ] && echo_err "saveHistory : History file not found" && exit 1
     [ -z "$1" ] && echo_err "saveHistory : Parameter is required" && return 1
-    [ -z "$1" ] && return 1
+    [ "$1" == "null" ] && return 1
 
     chatHistory+=("$1")
     echo "$1" >> "$historyPath"
@@ -136,7 +136,7 @@ function sendRequest() {
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+    [ "$result" == "null" ] && echo_err "Something wrong with API" && exit 1
 
     saveHistory "$result"
     local role=$(echo "$result" | jq -r '.role')
@@ -181,7 +181,7 @@ for i in $(seq 1 $#); do
             bat -p -l json "$historyPath"
             exit 0;;
         -s | --system)
-            systemText=$([ -z "$2" ] && cat /dev/stdin || echo "$2")
+            systemText=$([ "$2" == "-" ] && cat /dev/stdin || echo "$2")
             content=$(echo -n "$systemText" | jq -Rs .)
             saveHistory "{\"role\":\"system\",\"content\":$content}"
             shift;;
