@@ -15,20 +15,20 @@ declare chatHistory
 
 # echo_err <msg>
 function echo_err() {
-    [ "$1" == "" ] && exit 1
+    [ -z "$1" ] && exit 1
     echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
 }
 
 # echo_log <msg>
 # Log message for test purpose
 function echo_log() {
-    [ "$1" == "" ] && exit 1
+    [ -z "$1" ] && exit 1
     local date=$(date "+%Y-%m-%d %H:%M:%S")
     echo -e "[$date] : $1" >> "$logPath"
 }
 
 function input() {
-    [ "$1" == "" ] && echo_err $"input : prompt is needed" && exit 1
+    [ -z "$1" ] && echo_err $"input : prompt is needed" && exit 1
 
     local inputText=""
     exec 3<&0 # sauvegarde de l'entrée standard
@@ -36,7 +36,7 @@ function input() {
     read -r -p "$1" inputText
     exec 0<&3 # restauration de l'entrée standard
 
-    [ "$inputText" == "" ] && input "$1"
+    [ -z "$inputText" ] && input "$1"
 
     echo "$inputText"
 }
@@ -73,8 +73,8 @@ function initConfig() {
 # saveHistory <text>
 function saveHistory() {
     [ ! -f "$historyPath" ] && echo_err "saveHistory : History file not found" && exit 1
-    [ "$1" == "" ] && echo_err "saveHistory : Parameter is required" && return 1
-    [ "$1" == "null" ] && return 1
+    [ -z "$1" ] && echo_err "saveHistory : Parameter is required" && return 1
+    [ -z "$1" ] && return 1
 
     chatHistory+=("$1")
     echo "$1" >> "$historyPath"
@@ -89,11 +89,11 @@ function loadHistory() {
 }
 
 function verification() {
-    [ "$(which jq 2> /dev/null)" == "" ] && echo_err "\"jq\" is required for reading json" && exit 1
-    [ "$(which bat 2> /dev/null)" == "" ] && echo_err "\"bat\" is required for syntax highligting" && exit 1
-    [ "$API_KEY" == "" ] && echo_err "API_KEY is needed" && exit 1
-    [ "$model" == "" ] && echo_err "Model is needed" && exit 1
-    [ "$temp" == "" ] && echo_err "Temperature is needed" && exit 1
+    [ -z "$(which jq 2> /dev/null)" ] && echo_err "\"jq\" is required for reading json" && exit 1
+    [ -z "$(which bat 2> /dev/null)" ] && echo_err "\"bat\" is required for syntax highligting" && exit 1
+    [ -z "$API_KEY" ] && echo_err "API_KEY is needed" && exit 1
+    [ -z "$model" ] && echo_err "Model is needed" && exit 1
+    [ -z "$temp" ] && echo_err "Temperature is needed" && exit 1
 }
 
 function readDotenv() {
@@ -112,8 +112,8 @@ function readDotenv() {
 
 # sendRequest <text> [format]
 function sendRequest() {
-    [ "$1" == "" ] && echo_err "sendRequest : Parameter is required" && exit 1
-    local format=$([ "$2" == "" ] && echo 0 || echo $2)
+    [ -z "$1" ] && echo_err "sendRequest : Parameter is required" && exit 1
+    local format=$([ -z "$2" ] && echo 0 || echo $2)
 
     local content=$(echo -n "$1" | jq -Rs .)
     saveHistory "{\"role\":\"user\",\"content\":$content}"
@@ -136,7 +136,7 @@ function sendRequest() {
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    [ "$result" == "null" ] && echo_err "Something wrong with API" && exit 1
+    [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
 
     saveHistory "$result"
     local role=$(echo "$result" | jq -r '.role')
@@ -181,7 +181,7 @@ for i in $(seq 1 $#); do
             bat -p -l json "$historyPath"
             exit 0;;
         -s | --system)
-            systemText=$([ "$2" == "-" ] && cat /dev/stdin || echo "$2")
+            systemText=$([ -z "$2" ] && cat /dev/stdin || echo "$2")
             content=$(echo -n "$systemText" | jq -Rs .)
             saveHistory "{\"role\":\"system\",\"content\":$content}"
             shift;;
@@ -201,7 +201,7 @@ loadHistory
 readDotenv
 verification
 [ $listModelVar -eq 1 ] && listModel && exit 0
-if [ "$text" == "" ]; then
+if [ -z "$text" ]; then
     interactiveMode
 else
     sendRequest "$text"
