@@ -67,7 +67,7 @@ bind H new-window "cligpt" \; rename-window "cligpt"
 
 To get a ChatGPT API key, you need to sign up on the OpenAI website and follow the instructions to create an account and obtain an API key.
 
-## Exemple
+## Example
 
 [![asciicast](https://asciinema.org/a/568168.svg)](https://asciinema.org/a/568168)
 [![asciicast](https://asciinema.org/a/568170.svg)](https://asciinema.org/a/568170)
