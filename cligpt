@@ -11,6 +11,7 @@ dotenv="${config}/.env"
 historyPath="${config}/history"
 logPath="${config}/log"
 listModelVar=0
+inerte=0
 declare chatHistory
 
 # echo_err <msg>
@@ -53,6 +54,7 @@ Option :
 -s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
 -c or --clear .......................... Clear history
 -L or --list-history ................... List history
+-i or --inerte ......................... Do nothing except saving prompt in history
 
 Example :
 $(basename "$0") # Interactive mode
@@ -185,6 +187,8 @@ for i in $(seq 1 $#); do
             content=$(echo -n "$systemText" | jq -Rs .)
             saveHistory "{\"role\":\"system\",\"content\":$content}"
             shift;;
+        -i | --inerte)
+            inerte=1;;
         "") ;;
         -*)
             echo_err $"Unknown parameter \"$1\""
@@ -200,7 +204,10 @@ initConfig
 loadHistory
 readDotenv
 verification
+
 [ $listModelVar -eq 1 ] && listModel && exit 0
+[ $inerte -eq 1 ] && exit 0
+
 if [ -z "$text" ]; then
     interactiveMode
 else

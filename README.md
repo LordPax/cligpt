@@ -46,6 +46,7 @@ Option :
 -s or --system [text] .................. Instruction with role system (use "-" for stdin)
 -c or --clear .......................... Clear history
 -L or --list-history ................... List history
+-i or --inerte ......................... Do nothing except saving prompt in history
 
 Example :
 cligpt # Interactive mode
