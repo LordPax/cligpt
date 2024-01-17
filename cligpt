@@ -1,17 +1,15 @@
 #!/bin/bash
 
-version="v0.2.0"
-model="gpt-3.5-turbo"
+version="v1.0.0"
 text=""
 systemText=""
-api="https://api.openai.com/v1"
-temp=0.7
 config="${HOME}/.config/cligpt"
-dotenv="${config}/.env"
+dotenv="${config}/config"
 historyPath="${config}/history"
 logPath="${config}/log"
 listModelVar=0
 inerte=0
+dependencies="curl jq bat"
 declare chatHistory
 
 # echo_err <msg>
@@ -49,8 +47,8 @@ Option :
 -h or --help ........................... Show help
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
--m or --model <model> .................. Select model (default : $model)
--t or --temp <temperature> ............. Set temperature (default : $temp)
+-m or --model <model> .................. Select model (default : $MODEL)
+-t or --temp <temperature> ............. Set temperature (default : $TEMP)
 -s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
 -c or --clear .......................... Clear history
 -L or --list-history ................... List history
@@ -66,9 +64,16 @@ $(basename "$0") -s \"some prompt with role system\" \"some prompt with role use
     exit 0
 }
 
+function writeConfig() {
+    echo "API_KEY=";
+    echo "API_ROUTE=https://api.openai.com/v1";
+    echo "MODEL=gpt-3.5-turbo";
+    echo "TEMP=0.7";
+}
+
 function initConfig() {
     [ ! -d "$config" ] && mkdir "$config" && echo "Config are generated"
-    [ ! -f "$dotenv" ] && echo "API_KEY=" > "$dotenv" && echo "Dotenv file is generated"
+    [ ! -f "$dotenv" ] && writeConfig > "$dotenv" && echo "Dotenv file is generated"
     [ ! -f "$historyPath" ] && touch "$historyPath"
 }
 
@@ -90,12 +95,19 @@ function loadHistory() {
     done < "$historyPath"
 }
 
+function checkDependencies() {
+    for dependency in $dependencies; do
+        ! command -v "$dependency" > /dev/null 2>&1 && \
+            echo_err "Dependency \"$dependency\" not found" && exit 1
+    done
+}
+
 function verification() {
-    [ -z "$(which jq 2> /dev/null)" ] && echo_err "\"jq\" is required for reading json" && exit 1
-    [ -z "$(which bat 2> /dev/null)" ] && echo_err "\"bat\" is required for syntax highligting" && exit 1
+    checkDependencies
     [ -z "$API_KEY" ] && echo_err "API_KEY is needed" && exit 1
-    [ -z "$model" ] && echo_err "Model is needed" && exit 1
-    [ -z "$temp" ] && echo_err "Temperature is needed" && exit 1
+    [ -z "$MODEL" ] && echo_err "Model is needed" && exit 1
+    [ -z "$API_ROUTE" ] && echo_err "API_ROUTE is needed" && exit 1
+    [ -z "$TEMP" ] && echo_err "Temperature is needed" && exit 1
 }
 
 function readDotenv() {
@@ -120,7 +132,7 @@ function sendRequest() {
     local content=$(echo -n "$1" | jq -Rs .)
     saveHistory "{\"role\":\"user\",\"content\":$content}"
     local nbElem=${#chatHistory[@]}
-    local data="{\"model\":\"$model\",\"messages\":["
+    local data="{\"model\":\"$MODEL\",\"messages\":["
     data+="${chatHistory[0]}"
 
     if [ "$nbElem" -gt 1 ]; then
@@ -129,16 +141,16 @@ function sendRequest() {
         done
     fi
 
-    data+="],\"temperature\":$temp}"
+    data+="],\"temperature\":$TEMP}"
 
     local result=$(curl -s \
-        -X POST "$api/chat/completions" \
+        -X POST "$API_ROUTE/chat/completions" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $API_KEY" \
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    [ "$result" == "null" ] && echo_err "Something wrong with API" && exit 1
+    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
 
     saveHistory "$result"
     local role=$(echo "$result" | jq -r '.role')
@@ -149,7 +161,7 @@ function sendRequest() {
 }
 
 function listModel() {
-    curl -s "$api/models" \
+    curl -s "$API_ROUTE/models" \
         -H "Authorization: Bearer $API_KEY" | \
         jq -r '.data[].id'
 }
@@ -161,6 +173,10 @@ function interactiveMode() {
     done
 }
 
+initConfig
+loadHistory
+readDotenv
+
 for i in $(seq 1 $#); do
     case $1 in
         -h | --help)
@@ -171,10 +187,10 @@ for i in $(seq 1 $#); do
         -l | --list)
             listModelVar=1;;
         -m | --model)
-            model=$2
+            MODEL=$2
             shift;;
         -t | --temp)
-            temp=$2
+            TEMP=$2
             shift;;
         -c | --clear)
             echo -n "" > "$historyPath"
@@ -200,9 +216,6 @@ for i in $(seq 1 $#); do
     shift
 done
 
-initConfig
-loadHistory
-readDotenv
 verification
 
 [ $listModelVar -eq 1 ] && listModel && exit 0
