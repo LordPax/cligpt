@@ -2,7 +2,7 @@
 
 ## Description
 
-A bash script that use chatGPT api
+A bash script that use openai or mistral api
 
 ## Required Dependencies
 
@@ -26,10 +26,24 @@ cd cligpt
 ./cligpt
 ```
 
-3. Add your API key to `~/.config/cligpt/.env`:
+3. Add your API key to `~/.config/cligpt/config`:
+
+**Openai**
 
 ```bash
 API_KEY=your-api-key
+API_ROUTE=https://api.openai.com/v1
+MODEL=gpt-3.5-turbo
+TEMP=0.7
+```
+
+**Mistral**
+
+```
+API_KEY=your-api-key
+API_ROUTE=https://api.mistral.ai/v1
+MODEL=mistral-medium
+TEMP=0.7
 ```
 
 ## Usage
@@ -49,9 +63,9 @@ Option :
 -i or --inerte ......................... Do nothing except saving prompt in history
 
 Example :
-cligpt # Interactive mode
+cligpt
 cligpt "some prompt with role user"
-cat somefile.txt | cligpt -s - # Instruction mode
+cat somefile.txt | cligpt -s -
 cat somefile.txt | cligpt -s - "some prompt with role user"
 cligpt -s "some prompt with role system" "some prompt with role user"
 ```

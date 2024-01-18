@@ -16,6 +16,13 @@ declare chatHistory
 function echo_err() {
     [ -z "$1" ] && exit 1
     echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
+    echo_log "ERROR : $1"
+}
+
+function echo_info() {
+    [ -z "$1" ] && exit 1
+    echo "$1"
+    echo_log "$1"
 }
 
 # echo_log <msg>
@@ -23,7 +30,7 @@ function echo_err() {
 function echo_log() {
     [ -z "$1" ] && exit 1
     local date=$(date "+%Y-%m-%d %H:%M:%S")
-    echo -e "[$date] : $1" >> "$logPath"
+    echo -e "[$date] $1" >> "$logPath"
 }
 
 function input() {
@@ -72,8 +79,8 @@ function writeConfig() {
 }
 
 function initConfig() {
-    [ ! -d "$config" ] && mkdir "$config" && echo "Config are generated"
-    [ ! -f "$dotenv" ] && writeConfig > "$dotenv" && echo "Dotenv file is generated"
+    [ ! -d "$config" ] && mkdir "$config" && echo_info "Config are generated"
+    [ ! -f "$dotenv" ] && writeConfig > "$dotenv" && echo_info "Dotenv file is generated"
     [ ! -f "$historyPath" ] && touch "$historyPath"
 }
 
@@ -216,6 +223,7 @@ for i in $(seq 1 $#); do
     shift
 done
 
+echo_log "Model: $MODEL, Temperature: $TEMP, Route: $API_ROUTE"
 verification
 
 [ $listModelVar -eq 1 ] && listModel && exit 0
