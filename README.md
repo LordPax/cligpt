@@ -8,6 +8,7 @@ A bash script that use openai or mistral api
 
 -   `jq`
 -   `bat`
+-   `curl`
 
 Make sure these dependencies are installed before using CliGPT.
 

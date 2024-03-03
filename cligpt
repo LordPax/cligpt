@@ -26,7 +26,6 @@ function echo_info() {
 }
 
 # echo_log <msg>
-# Log message for test purpose
 function echo_log() {
     [ -z "$1" ] && exit 1
     local date=$(date "+%Y-%m-%d %H:%M:%S")
@@ -110,7 +109,6 @@ function checkDependencies() {
 }
 
 function verification() {
-    checkDependencies
     [ -z "$API_KEY" ] && echo_err "API_KEY is needed" && exit 1
     [ -z "$MODEL" ] && echo_err "Model is needed" && exit 1
     [ -z "$API_ROUTE" ] && echo_err "API_ROUTE is needed" && exit 1
@@ -180,57 +178,61 @@ function interactiveMode() {
     done
 }
 
+function main() {
+    for _ in $(seq 1 $#); do
+        case $1 in
+            -h | --help)
+                helpFunc;;
+            -v | --version)
+                echo $version
+                exit 0;;
+            -l | --list)
+                listModelVar=1;;
+            -m | --model)
+                MODEL=$2
+                shift;;
+            -t | --temp)
+                TEMP=$2
+                shift;;
+            -c | --clear)
+                echo -n "" > "$historyPath"
+                exit 0;;
+            -L | --list-history)
+                bat -p -l json "$historyPath"
+                exit 0;;
+            -s | --system)
+                systemText=$([ "$2" == "-" ] && cat /dev/stdin || echo "$2")
+                content=$(echo -n "$systemText" | jq -Rs .)
+                saveHistory "{\"role\":\"system\",\"content\":$content}"
+                shift;;
+            -i | --inerte)
+                inerte=1;;
+            "") ;;
+            -*)
+                echo_err $"Unknown parameter \"$1\""
+                exit 1;;
+            *)
+                text=$1
+                shift
+        esac
+        shift
+    done
+
+    echo_log "Model: $MODEL, Temperature: $TEMP, Route: $API_ROUTE"
+    verification
+
+    [ $listModelVar -eq 1 ] && listModel && exit 0
+    [ $inerte -eq 1 ] && exit 0
+
+    if [ -z "$text" ]; then
+        interactiveMode
+    else
+        sendRequest "$text"
+    fi
+}
+
+checkDependencies
 initConfig
 loadHistory
 readDotenv
-
-for i in $(seq 1 $#); do
-    case $1 in
-        -h | --help)
-            helpFunc;;
-        -v | --version)
-            echo $version
-            exit 0;;
-        -l | --list)
-            listModelVar=1;;
-        -m | --model)
-            MODEL=$2
-            shift;;
-        -t | --temp)
-            TEMP=$2
-            shift;;
-        -c | --clear)
-            echo -n "" > "$historyPath"
-            exit 0;;
-        -L | --list-history)
-            bat -p -l json "$historyPath"
-            exit 0;;
-        -s | --system)
-            systemText=$([ "$2" == "-" ] && cat /dev/stdin || echo "$2")
-            content=$(echo -n "$systemText" | jq -Rs .)
-            saveHistory "{\"role\":\"system\",\"content\":$content}"
-            shift;;
-        -i | --inerte)
-            inerte=1;;
-        "") ;;
-        -*)
-            echo_err $"Unknown parameter \"$1\""
-            exit 1;;
-        *)
-            text=$1
-            shift
-    esac
-    shift
-done
-
-echo_log "Model: $MODEL, Temperature: $TEMP, Route: $API_ROUTE"
-verification
-
-[ $listModelVar -eq 1 ] && listModel && exit 0
-[ $inerte -eq 1 ] && exit 0
-
-if [ -z "$text" ]; then
-    interactiveMode
-else
-    sendRequest "$text"
-fi
+main "$@"
