@@ -2,12 +2,10 @@
 
 version="v1.0.0"
 text=""
-systemText=""
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
 historyPath="${config}/history"
 logPath="${config}/log"
-listModelVar=0
 inerte=0
 dependencies="curl jq bat"
 declare chatHistory
@@ -46,19 +44,18 @@ function input() {
     echo "$inputText"
 }
 
-function helpFunc() {
-    echo -e $"Usage : $(basename "$0") [option] [text]
+function helpMain() {
+    echo -e $"Usage : $(basename "$0") [option] [command]
 
 Option :
 -h or --help ........................... Show help
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
--m or --model <model> .................. Select model (default : $MODEL)
--t or --temp <temperature> ............. Set temperature (default : $TEMP)
--s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
--c or --clear .......................... Clear history
--L or --list-history ................... List history
 -i or --inerte ......................... Do nothing except saving prompt in history
+
+Command :
+text ................................... Generate text
+image .................................. Generate image
 
 Example :
 $(basename "$0") # Interactive mode
@@ -70,11 +67,47 @@ $(basename "$0") -s \"some prompt with role system\" \"some prompt with role use
     exit 0
 }
 
+function helpText() {
+    echo -e $"Usage : $(basename "$0") [generalOption] text [option] [prompt]
+
+Option :
+-h or --help ........................... Show help text command
+-m or --model <model> .................. Select model (default : $TEXT_MODEL)
+-t or --temp <temperature> ............. Set temperature (default : $TEXT_TEMP)
+-s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
+-c or --clear .......................... Clear history
+-L or --list-history ................... List history"
+
+    exit 0
+}
+
+function helpImage() {
+    echo -e $"Usage : $(basename "$0") [generalOption] image [option] <prompt>
+
+Option :
+-h or --help ........................... Show help image command
+-m or --model <model> .................. Select model (default : $IMAGE_MODEL)
+-n or --nb <number> .................... Number of image to generate (default : $IMAGE_NB)
+-s or --size <size> .................... Size of image (default : $IMAGE_SIZE)
+-d or --download <name> ................ Download image
+-g or --generate ....................... Generate image
+-e or --edit ........................... Edit image
+-v or --variation ...................... Generate variation of image
+-V or --view ........................... View image"
+
+    exit 0
+}
+
+
+
 function writeConfig() {
     echo "API_KEY=";
     echo "API_ROUTE=https://api.openai.com/v1";
-    echo "MODEL=gpt-3.5-turbo";
-    echo "TEMP=0.7";
+    echo "TEXT_MODEL=gpt-3.5-turbo";
+    echo "TEXT_TEMP=0.7";
+    echo "IMAGE_MODEL=dall-e-3";
+    echo "IMAGE_NB=1";
+    echo "IMAGE_SIZE=512";
 }
 
 function initConfig() {
@@ -110,13 +143,16 @@ function checkDependencies() {
 
 function verification() {
     [ -z "$API_KEY" ] && echo_err "API_KEY is needed" && exit 1
-    [ -z "$MODEL" ] && echo_err "Model is needed" && exit 1
+    [ -z "$TEXT_MODEL" ] && echo_err "Model is needed" && exit 1
     [ -z "$API_ROUTE" ] && echo_err "API_ROUTE is needed" && exit 1
-    [ -z "$TEMP" ] && echo_err "Temperature is needed" && exit 1
+    [ -z "$TEXT_TEMP" ] && echo_err "Temperature is needed" && exit 1
+    [ -z "$IMAGE_MODEL" ] && echo_err "Image model is needed" && exit 1
+    [ -z "$IMAGE_NB" ] && echo_err "Number of image is needed" && exit 1
+    [ -z "$IMAGE_SIZE" ] && echo_err "Size of image is needed" && exit 1
 }
 
-function readDotenv() {
-    [ ! -f "$dotenv" ] && echo_err "readDotenv : Dotenv file not found" && exit 1
+function readConfig() {
+    [ ! -f "$dotenv" ] && echo_err "readConfig : Dotenv file not found" && exit 1
 
     local k
     local v
@@ -129,15 +165,15 @@ function readDotenv() {
     done < "$dotenv"
 }
 
-# sendRequest <text> [format]
-function sendRequest() {
-    [ -z "$1" ] && echo_err "sendRequest : Parameter is required" && exit 1
+# sendTextRequest <text> [format]
+function sendTextRequest() {
+    [ -z "$1" ] && echo_err "sendTextRequest : Parameter is required" && exit 1
     local format=$([ -z "$2" ] && echo 0 || echo $2)
 
     local content=$(echo -n "$1" | jq -Rs .)
     saveHistory "{\"role\":\"user\",\"content\":$content}"
     local nbElem=${#chatHistory[@]}
-    local data="{\"model\":\"$MODEL\",\"messages\":["
+    local data="{\"model\":\"$TEXT_MODEL\",\"messages\":["
     data+="${chatHistory[0]}"
 
     if [ "$nbElem" -gt 1 ]; then
@@ -146,7 +182,7 @@ function sendRequest() {
         done
     fi
 
-    data+="],\"temperature\":$TEMP}"
+    data+="],\"temperature\":$TEXT_TEMP}"
 
     local result=$(curl -s \
         -X POST "$API_ROUTE/chat/completions" \
@@ -174,25 +210,55 @@ function listModel() {
 function interactiveMode() {
     while true; do
         printf "\n"
-        sendRequest "$(input $'\e[34muser>\e[0m ')" 1
+        sendTextRequest "$(input $'\e[34muser>\e[0m ')" 1
     done
 }
 
-function main() {
+# systemText <text>
+function systemText() {
+    [ -z "$1" ] && echo_err "systemText : Parameter is required" && exit 1
+    local systemStr=$([ "$1" == "-" ] && cat /dev/stdin || echo "$1")
+    local content=$(echo -n "$systemStr" | jq -Rs .)
+    saveHistory "{\"role\":\"system\",\"content\":$content}"
+}
+
+# sendImageGenerationRequest <text>
+function sendImageGenerationRequest() {
+    [ -z "$1" ] && echo_err "sendImageGenerationRequest : Parameter is required" && exit 1
+
+    local content=$(echo -n "$1" | jq -Rs .)
+    local data="{\"model\":\"$IMAGE_MODEL\",\"prompt\":$content,\"n\":$IMAGE_NB,\"size\":\"$IMAGE_SIZE\"}"
+    local result=$(curl -s \
+        -X POST "$API_ROUTE/images/generations" \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $API_KEY" \
+        -d "$data" |\
+        jq '.data'
+    )
+
+    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+
+    local url=$(echo "$result" | jq -r '.[].url')
+
+    if [ -n "$download" ]; then
+        curl -s -o "$download" "$url"
+        echo_info "Image downloaded at \"$download\""
+        exit 0
+    fi
+
+    echo "$url"
+}
+
+function textCommand() {
     for _ in $(seq 1 $#); do
         case $1 in
             -h | --help)
-                helpFunc;;
-            -v | --version)
-                echo $version
-                exit 0;;
-            -l | --list)
-                listModelVar=1;;
+                helpText;;
             -m | --model)
-                MODEL=$2
+                TEXT_MODEL=$2
                 shift;;
             -t | --temp)
-                TEMP=$2
+                TEXT_TEMP=$2
                 shift;;
             -c | --clear)
                 echo -n "" > "$historyPath"
@@ -201,12 +267,8 @@ function main() {
                 bat -p -l json "$historyPath"
                 exit 0;;
             -s | --system)
-                systemText=$([ "$2" == "-" ] && cat /dev/stdin || echo "$2")
-                content=$(echo -n "$systemText" | jq -Rs .)
-                saveHistory "{\"role\":\"system\",\"content\":$content}"
+                systemText "$2"
                 shift;;
-            -i | --inerte)
-                inerte=1;;
             "") ;;
             -*)
                 echo_err $"Unknown parameter \"$1\""
@@ -218,21 +280,102 @@ function main() {
         shift
     done
 
-    echo_log "Model: $MODEL, Temperature: $TEMP, Route: $API_ROUTE"
     verification
 
-    [ $listModelVar -eq 1 ] && listModel && exit 0
     [ $inerte -eq 1 ] && exit 0
 
     if [ -z "$text" ]; then
         interactiveMode
     else
-        sendRequest "$text"
+        sendTextRequest "$text"
     fi
+}
+
+function imageCommand() {
+    local action=0
+    local download=""
+
+    for _ in $(seq 1 $#); do
+        case $1 in
+            -h | --help)
+                helpImage;;
+            -m | --model)
+                IMAGE_MODEL=$2
+                shift;;
+            -n | --nb)
+                IMAGE_NB=$2
+                shift;;
+            -s | --size)
+                IMAGE_SIZE=$2
+                shift;;
+            -d | --download)
+                download=$2
+                shift;;
+            -g | --generate)
+                action=1;;
+            -e | --edit)
+                action=2;;
+            -v | --variation)
+                action=3;;
+            "") ;;
+            -*)
+                echo_err $"Unknown parameter \"$1\""
+                exit 1;;
+            *)
+                text=$1
+                shift
+        esac
+        shift
+    done
+
+    verification
+
+    [ -z "$text" ] && echo_err "Image prompt is needed" && exit 1
+    [ $inerte -eq 1 ] && exit 0
+
+    if [ $action -eq 1 ]; then
+        sendImageGenerationRequest "$text"
+    elif [ $action -eq 2 ]; then
+        echo "Edit image (comming soon)"
+    elif [ $action -eq 3 ]; then
+        echo "Generate variation of image (comming soon)"
+    fi
+}
+
+function main() {
+    for _ in $(seq 1 $#); do
+        case $1 in
+            -h | --help)
+                helpMain;;
+            -v | --version)
+                echo $version
+                exit 0;;
+            -l | --list)
+                listModel
+                exit 0;;
+            -i | --inerte)
+                inerte=1;;
+            text)
+                shift
+                textCommand "$@"
+                exit 0;;
+            image)
+                shift
+                imageCommand "$@"
+                exit 0;;
+            "") ;;
+            *)
+                echo_err $"Unknown parameter \"$1\""
+                exit 1;;
+        esac
+        shift
+    done
+
+    helpMain
 }
 
 checkDependencies
 initConfig
+readConfig
 loadHistory
-readDotenv
 main "$@"

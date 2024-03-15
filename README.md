@@ -6,9 +6,9 @@ A bash script that use openai or mistral api
 
 ## Required Dependencies
 
--   `jq`
--   `bat`
--   `curl`
+* `jq`
+* `bat`
+* `curl`
 
 Make sure these dependencies are installed before using CliGPT.
 
@@ -34,8 +34,8 @@ cd cligpt
 ```bash
 API_KEY=your-api-key
 API_ROUTE=https://api.openai.com/v1
-MODEL=gpt-3.5-turbo
-TEMP=0.7
+TEXT_MODEL=gpt-3.5-turbo
+TEXT_TEMP=0.7
 ```
 
 **Mistral**
@@ -43,32 +43,64 @@ TEMP=0.7
 ```
 API_KEY=your-api-key
 API_ROUTE=https://api.mistral.ai/v1
-MODEL=mistral-medium
-TEMP=0.7
+TEXT_MODEL=mistral-medium
+TEXT_TEMP=0.7
 ```
 
 ## Usage
 
+* main help
+
 ```
-Usage : cligpt [option] [text]
+Usage : cligpt [option] [command]
 
 Option :
 -h or --help ........................... Show help
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
--m or --model <model> .................. Select model (default : gpt-3.5-turbo)
+-i or --inerte ......................... Do nothing except saving prompt in history
+
+Command :
+text ................................... Generate text
+image .................................. Generate image
+
+Example :
+cligpt # Interactive mode
+cligpt "some prompt with role user"
+cat somefile.txt | cligpt -s - # Instruction mode
+cat somefile.txt | cligpt -s - "some prompt with role user"
+cligpt -s "some prompt with role system" "some prompt with role user"
+```
+
+* text help
+
+```
+Usage : cligpt [generalOption] text [option] [prompt]
+
+Option :
+-h or --help ........................... Show help text command
+-m or --model <model> .................. Select model (default : gpt-4)
 -t or --temp <temperature> ............. Set temperature (default : 0.7)
 -s or --system [text] .................. Instruction with role system (use "-" for stdin)
 -c or --clear .......................... Clear history
 -L or --list-history ................... List history
--i or --inerte ......................... Do nothing except saving prompt in history
+```
 
-Example :
-cligpt
-cligpt "some prompt with role user"
-cat somefile.txt | cligpt -s -
-cat somefile.txt | cligpt -s - "some prompt with role user"
-cligpt -s "some prompt with role system" "some prompt with role user"
+* image help
+
+```
+Usage : cligpt [generalOption] image [option] <prompt>
+
+Option :
+-h or --help ........................... Show help image command
+-m or --model <model> .................. Select model (default : dall-e-3)
+-n or --nb <number> .................... Number of image to generate (default : 1)
+-s or --size <size> .................... Size of image (default : 1024x1024)
+-d or --download <name> ................ Download image
+-g or --generate ....................... Generate image
+-e or --edit ........................... Edit image
+-v or --variation ...................... Generate variation of image
+-V or --view ........................... View image
 ```
 
 ## Integration with tmux
