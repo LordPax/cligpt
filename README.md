@@ -63,13 +63,6 @@ Option :
 Command :
 text ................................... Generate text
 image .................................. Generate image
-
-Example :
-cligpt # Interactive mode
-cligpt "some prompt with role user"
-cat somefile.txt | cligpt -s - # Instruction mode
-cat somefile.txt | cligpt -s - "some prompt with role user"
-cligpt -s "some prompt with role system" "some prompt with role user"
 ```
 
 * text help
@@ -83,7 +76,14 @@ Option :
 -t or --temp <temperature> ............. Set temperature (default : 0.7)
 -s or --system [text] .................. Instruction with role system (use "-" for stdin)
 -c or --clear .......................... Clear history
--L or --list-history ................... List history
+-l or --list-history ................... List history
+
+Example :
+cligpt text # Interactive mode
+cligpt text "some prompt with role user"
+cat somefile.txt | cligpt text -s - # Instruction mode
+cat somefile.txt | cligpt text -s - "some prompt with role user"
+cligpt text -s "some prompt with role system" "some prompt with role user"
 ```
 
 * image help
@@ -96,11 +96,11 @@ Option :
 -m or --model <model> .................. Select model (default : dall-e-3)
 -n or --nb <number> .................... Number of image to generate (default : 1)
 -s or --size <size> .................... Size of image (default : 1024x1024)
--d or --download <name> ................ Download image
--g or --generate ....................... Generate image
--e or --edit ........................... Edit image
--v or --variation ...................... Generate variation of image
--V or --view ........................... View image
+-o or --output <name> .................. Get image in file
+
+Example :
+cligpt image "some prompt with role user"
+cligpt image -o image.png "some prompt with role user"
 ```
 
 ## Integration with tmux

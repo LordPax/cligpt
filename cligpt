@@ -1,22 +1,22 @@
 #!/bin/bash
 
-version="v1.0.0"
-text=""
+version="v2.0.0"
+name=$(basename "$0")
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
 historyPath="${config}/history"
 logPath="${config}/log"
-inerte=0
-dependencies="curl jq bat"
+dependencies="curl jq bat base64"
 declare chatHistory
 
 # echo_err <msg>
 function echo_err() {
     [ -z "$1" ] && exit 1
-    echo -e "\e[31mERROR :\e[0m $1" > /dev/stderr
+    echo "ERROR : $1" > /dev/stderr
     echo_log "ERROR : $1"
 }
 
+# echo_info <msg>
 function echo_info() {
     [ -z "$1" ] && exit 1
     echo "$1"
@@ -55,20 +55,13 @@ Option :
 
 Command :
 text ................................... Generate text
-image .................................. Generate image
-
-Example :
-$(basename "$0") # Interactive mode
-$(basename "$0") \"some prompt with role user\"
-cat somefile.txt | $(basename "$0") -s - # Instruction mode
-cat somefile.txt | $(basename "$0") -s - \"some prompt with role user\"
-$(basename "$0") -s \"some prompt with role system\" \"some prompt with role user\""
+image .................................. Generate image"
 
     exit 0
 }
 
 function helpText() {
-    echo -e $"Usage : $(basename "$0") [generalOption] text [option] [prompt]
+    echo -e $"Usage : $name [generalOption] text [option] [prompt]
 
 Option :
 -h or --help ........................... Show help text command
@@ -76,29 +69,34 @@ Option :
 -t or --temp <temperature> ............. Set temperature (default : $TEXT_TEMP)
 -s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
 -c or --clear .......................... Clear history
--L or --list-history ................... List history"
+-l or --list-history ................... List history
+
+Example :
+$name text # Interactive mode
+$name text \"some prompt with role user\"
+cat somefile.txt | $name text -s - # Instruction mode
+cat somefile.txt | $name text -s - \"some prompt with role user\"
+$name text -s \"some prompt with role system\" \"some prompt with role user\""
 
     exit 0
 }
 
 function helpImage() {
-    echo -e $"Usage : $(basename "$0") [generalOption] image [option] <prompt>
+    echo -e $"Usage : $name [generalOption] image [option] <prompt>
 
 Option :
 -h or --help ........................... Show help image command
 -m or --model <model> .................. Select model (default : $IMAGE_MODEL)
 -n or --nb <number> .................... Number of image to generate (default : $IMAGE_NB)
 -s or --size <size> .................... Size of image (default : $IMAGE_SIZE)
--d or --download <name> ................ Download image
--g or --generate ....................... Generate image
--e or --edit ........................... Edit image
--v or --variation ...................... Generate variation of image
--V or --view ........................... View image"
+-o or --output <name> .................. Get image in file
+
+Example :
+$name image \"some prompt with role user\"
+$name image -o image.png \"some prompt with role user\""
 
     exit 0
 }
-
-
 
 function writeConfig() {
     echo "API_KEY=";
@@ -107,7 +105,7 @@ function writeConfig() {
     echo "TEXT_TEMP=0.7";
     echo "IMAGE_MODEL=dall-e-3";
     echo "IMAGE_NB=1";
-    echo "IMAGE_SIZE=512";
+    echo "IMAGE_SIZE=1024x1024";
 }
 
 function initConfig() {
@@ -168,7 +166,7 @@ function readConfig() {
 # sendTextRequest <text> [format]
 function sendTextRequest() {
     [ -z "$1" ] && echo_err "sendTextRequest : Parameter is required" && exit 1
-    local format=$([ -z "$2" ] && echo 0 || echo $2)
+    local format=$([ -z "$2" ] && echo 0 || echo "$2")
 
     local content=$(echo -n "$1" | jq -Rs .)
     saveHistory "{\"role\":\"user\",\"content\":$content}"
@@ -226,27 +224,32 @@ function systemText() {
 function sendImageGenerationRequest() {
     [ -z "$1" ] && echo_err "sendImageGenerationRequest : Parameter is required" && exit 1
 
+    local format=$([ -z "$output" ] && echo "url" || echo "b64_json")
     local content=$(echo -n "$1" | jq -Rs .)
-    local data="{\"model\":\"$IMAGE_MODEL\",\"prompt\":$content,\"n\":$IMAGE_NB,\"size\":\"$IMAGE_SIZE\"}"
+    local data="{\"model\":\"$IMAGE_MODEL\",\"prompt\":$content,\"n\":$IMAGE_NB,\"size\":\"$IMAGE_SIZE\",\"response_format\":\"$format\"}"
     local result=$(curl -s \
         -X POST "$API_ROUTE/images/generations" \
         -H "Content-Type: application/json" \
         -H "Authorization: Bearer $API_KEY" \
-        -d "$data" |\
-        jq '.data'
+        -d "$data"
     )
 
-    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
-
-    local url=$(echo "$result" | jq -r '.[].url')
-
-    if [ -n "$download" ]; then
-        curl -s -o "$download" "$url"
-        echo_info "Image downloaded at \"$download\""
-        exit 0
+    if echo "$result" | grep -q "error"; then
+        local error=$(echo "$result" | jq -r '.error.message')
+        echo_err "$error"
+        exit 1
     fi
 
-    echo "$url"
+    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+    local image=$(echo "$result" | jq -r ".data[].$format")
+
+    if [ "$format" == "b64_json" ]; then
+        echo "$image" | base64 -d > "$output"
+        echo_info "Image output to \"$output\""
+        exit 0
+    fi
+    
+    echo "$image"
 }
 
 function textCommand() {
@@ -263,7 +266,7 @@ function textCommand() {
             -c | --clear)
                 echo -n "" > "$historyPath"
                 exit 0;;
-            -L | --list-history)
+            -l | --list-history)
                 bat -p -l json "$historyPath"
                 exit 0;;
             -s | --system)
@@ -292,8 +295,7 @@ function textCommand() {
 }
 
 function imageCommand() {
-    local action=0
-    local download=""
+    local output=""
 
     for _ in $(seq 1 $#); do
         case $1 in
@@ -308,15 +310,9 @@ function imageCommand() {
             -s | --size)
                 IMAGE_SIZE=$2
                 shift;;
-            -d | --download)
-                download=$2
+            -o | --output)
+                output=$2
                 shift;;
-            -g | --generate)
-                action=1;;
-            -e | --edit)
-                action=2;;
-            -v | --variation)
-                action=3;;
             "") ;;
             -*)
                 echo_err $"Unknown parameter \"$1\""
@@ -330,19 +326,16 @@ function imageCommand() {
 
     verification
 
-    [ -z "$text" ] && echo_err "Image prompt is needed" && exit 1
     [ $inerte -eq 1 ] && exit 0
+    [ -z "$text" ] && echo_err "Image prompt is needed" && exit 1
 
-    if [ $action -eq 1 ]; then
-        sendImageGenerationRequest "$text"
-    elif [ $action -eq 2 ]; then
-        echo "Edit image (comming soon)"
-    elif [ $action -eq 3 ]; then
-        echo "Generate variation of image (comming soon)"
-    fi
+    sendImageGenerationRequest "$text"
 }
 
 function main() {
+    local text=""
+    local inerte=0
+
     for _ in $(seq 1 $#); do
         case $1 in
             -h | --help)
