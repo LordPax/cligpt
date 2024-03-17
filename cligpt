@@ -245,7 +245,7 @@ function sendImageGenerationRequest() {
 
     if [ "$format" == "b64_json" ]; then
         echo "$image" | base64 -d > "$output"
-        echo_info "Image output to \"$output\""
+        echo_info "Image saved to \"$output\""
         exit 0
     fi
     
