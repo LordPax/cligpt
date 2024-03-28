@@ -98,6 +98,13 @@ Option :
 -s or --size <size> .................... Size of image (default : 1024x1024)
 -o or --output <name> .................. Get image in file
 
+Size :
+- 256x256
+- 512x512
+- 1024x1024
+- 1024x1792
+- 1792x1024
+
 Example :
 cligpt image "some prompt with role user"
 cligpt image -o image.png "some prompt with role user"
