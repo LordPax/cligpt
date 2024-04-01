@@ -9,6 +9,7 @@ logPath="${config}/log"
 dependencies="curl jq bat base64"
 speechDependencies="pacat" # Change this if you want to use another audio recorder
 tempDir=""
+quiet=0
 declare chatHistory
 
 # echo_err <msg>
@@ -73,6 +74,7 @@ Option :
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
 -i or --inerte ......................... Do nothing except saving prompt in history
+-q or --quiet .......................... Quiet mode
 
 Command :
 text ................................... Generate text
@@ -444,7 +446,7 @@ function speechCommand() {
     if [ -z "$file" ]; then
         tempDir=$(mktemp -d)
         file="$tempDir/${randomName}.ogg"
-        echo "Recording audio (Ctrl+C to stop) ..." > /dev/stderr
+        [ $quiet -eq 0 ] && echo "Recording audio (Ctrl+C to stop) ..." > /dev/stderr
 
         # Change this command if you want to use another audio recorder
         pacat --file-format=oga -r "$file"
@@ -472,6 +474,8 @@ function main() {
                 exit 0;;
             -i | --inerte)
                 inerte=1;;
+            -q | --quiet)
+                quiet=1;;
             text)
                 shift
                 textCommand "$@"
