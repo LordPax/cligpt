@@ -1,12 +1,14 @@
 #!/bin/bash
 
-version="v2.0.0"
+version="v2.1.0"
 name=$(basename "$0")
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
 historyPath="${config}/history"
 logPath="${config}/log"
 dependencies="curl jq bat base64"
+speechDependencies="pacat" # Change this if you want to use another audio recorder
+tempDir=""
 declare chatHistory
 
 # echo_err <msg>
@@ -44,8 +46,27 @@ function input() {
     echo "$inputText"
 }
 
+# randomString <length>
+function randomString() {
+    [ -z "$1" ] && exit 1
+    tr -dc 'a-zA-Z0-9' < /dev/urandom | \
+        fold -w "$1" | \
+        head -n 1
+}
+
+# rmTemp <tmpDirectory>
+function rmTemp() {
+    [ -z "$tempDir" ] && exit 0
+    [ ! -d "$tempDir" ] && echo_err "rmTemp : Directory not found" && exit 1
+    
+    ! echo "$tempDir" | grep -oqE "/tmp/tmp\.[a-zA-Z0-9]{10}" && \
+        echo_err "rmTemp : Directory is not a temp directory" && exit 1
+
+    rm -rf "$tempDir"
+}
+
 function helpMain() {
-    echo -e $"Usage : $(basename "$0") [option] [command]
+    echo -e $"Usage : $name [option] [command]
 
 Option :
 -h or --help ........................... Show help
@@ -55,7 +76,8 @@ Option :
 
 Command :
 text ................................... Generate text
-image .................................. Generate image"
+image .................................. Generate image
+speech ................................. Generate text from speech"
 
     exit 0
 }
@@ -105,6 +127,22 @@ $name image -o image.png \"some prompt with role user\""
     exit 0
 }
 
+function helpTranscription() {
+    echo -e $"Usage : $name [generalOption] speech [option] [file]
+
+Option :
+-h or --help ........................... Show help speech command
+-m or --model <model> .................. Select model (default : $SPEECH_MODEL)
+-l or --lang <language> ................ Select language (default : $SPEECH_LANG)
+
+Example :
+$name speech # record audio and generate text
+$name speech somefile.ogg"
+
+
+    exit 0
+}
+
 function writeConfig() {
     echo "API_KEY=";
     echo "API_ROUTE=https://api.openai.com/v1";
@@ -113,6 +151,8 @@ function writeConfig() {
     echo "IMAGE_MODEL=dall-e-3";
     echo "IMAGE_NB=1";
     echo "IMAGE_SIZE=1024x1024";
+    echo "SPEECH_MODEL=whisper-1";
+    echo "SPEECH_LANG=fr";
 }
 
 function initConfig() {
@@ -140,7 +180,13 @@ function loadHistory() {
 }
 
 function checkDependencies() {
-    for dependency in $dependencies; do
+    local deps="$dependencies"
+
+    if [ "$1" == "speech" ]; then
+        deps="$speechDependencies"
+    fi
+
+    for dependency in $deps; do
         ! command -v "$dependency" > /dev/null 2>&1 && \
             echo_err "Dependency \"$dependency\" not found" && exit 1
     done
@@ -154,6 +200,8 @@ function verification() {
     [ -z "$IMAGE_MODEL" ] && echo_err "Image model is needed" && exit 1
     [ -z "$IMAGE_NB" ] && echo_err "Number of image is needed" && exit 1
     [ -z "$IMAGE_SIZE" ] && echo_err "Size of image is needed" && exit 1
+    [ -z "$SPEECH_MODEL" ] && echo_err "Audio model is needed" && exit 1
+    [ -z "$SPEECH_LANG" ] && echo_err "Language is needed" && exit 1
 }
 
 function readConfig() {
@@ -196,7 +244,8 @@ function sendTextRequest() {
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+    [ "$result" == "null" ] || [ -z "$result" ] && \
+        echo_err "Something wrong with API" && exit 1
 
     saveHistory "$result"
     local role=$(echo "$result" | jq -r '.role')
@@ -259,6 +308,30 @@ function sendImageGenerationRequest() {
     echo "$image"
 }
 
+# sendSpeechRequest <file>
+function sendSpeechRequest() {
+    [ -z "$1" ] && echo_err "sendSpeechRequest : Parameter is required" && exit 1
+
+    local result=$(curl -s \
+        -X POST "$API_ROUTE/audio/transcriptions" \
+        -H "Authorization: Bearer $API_KEY" \
+        -H "Content-Type: multipart/form-data" \
+        -F "file=@$1" \
+        -F "model=\"$SPEECH_MODEL\""
+    )
+
+    if echo "$result" | grep -q "error"; then
+        local error=$(echo "$result" | jq -r '.error.message')
+        echo_err "$error"
+        exit 1
+    fi
+
+    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+
+    local text=$(echo "$result" | jq -r '.text')
+    echo "$text"
+}
+
 function textCommand() {
     for _ in $(seq 1 $#); do
         case $1 in
@@ -293,12 +366,9 @@ function textCommand() {
     verification
 
     [ $inerte -eq 1 ] && exit 0
+    [ -z "$text" ] && interactiveMode && exit 0
 
-    if [ -z "$text" ]; then
-        interactiveMode
-    else
-        sendTextRequest "$text"
-    fi
+    sendTextRequest "$text"
 }
 
 function imageCommand() {
@@ -339,6 +409,53 @@ function imageCommand() {
     sendImageGenerationRequest "$text"
 }
 
+
+function speechCommand() {
+    checkDependencies speech
+
+    local randomName=$(randomString 10)
+    local file=""
+
+    for _ in $(seq 1 $#); do
+        case $1 in
+            -h | --help)
+                helpTranscription;;
+            -m | --model)
+                SPEECH_MODEL=$2
+                shift;;
+            -l | --lang)
+                SPEECH_LANG=$2
+                shift;;
+            "") ;;
+            -*)
+                echo_err $"Unknown parameter \"$1\""
+                exit 1;;
+            *)
+                file=$1
+                shift
+        esac
+        shift
+    done
+
+    verification
+
+    [ $inerte -eq 1 ] && exit 0
+
+    if [ -z "$file" ]; then
+        tempDir=$(mktemp -d)
+        file="$tempDir/${randomName}.ogg"
+        echo "Recording audio (Ctrl+C to stop) ..." > /dev/stderr
+
+        # Change this command if you want to use another audio recorder
+        pacat --file-format=oga -r "$file"
+    fi
+
+    [ ! -f "$file" ] && echo_err "File not found" && rmTemp && exit 1
+
+    sendSpeechRequest "$file"
+    rmTemp
+}
+
 function main() {
     local text=""
     local inerte=0
@@ -362,6 +479,10 @@ function main() {
             image)
                 shift
                 imageCommand "$@"
+                exit 0;;
+            speech)
+                shift
+                speechCommand "$@"
                 exit 0;;
             "") ;;
             *)

@@ -63,6 +63,7 @@ Option :
 Command :
 text ................................... Generate text
 image .................................. Generate image
+speech ................................. Generate text from speech
 ```
 
 * text help
@@ -110,17 +111,32 @@ cligpt image "some prompt with role user"
 cligpt image -o image.png "some prompt with role user"
 ```
 
+* speech help
+
+```
+Usage : cligpt [generalOption] speech [option] [file]
+
+Option :
+-h or --help ........................... Show help speech command
+-m or --model <model> .................. Select model (default : whisper-1)
+-l or --lang <language> ................ Select language (default : fr)
+
+Example :
+cligpt speech # record audio and generate text
+cligpt speech somefile.mp3
+```
+
 ## Integration with tmux
 
 ```
-bind H new-window "cligpt" \; rename-window "cligpt"
+bind H new-window "cligpt text" \; rename-window "cligpt"
 ```
 
 ## FAQ
 
-### How do I get my ChatGPT API key?
+### How do I get my OpenAI API key?
 
-To get a ChatGPT API key, you need to sign up on the OpenAI website and follow the instructions to create an account and obtain an API key.
+To get an OpenAI API key, you need to sign up on the OpenAI website and follow the instructions to create an account and obtain an API key.
 
 ## Example
 
