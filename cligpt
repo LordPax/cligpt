@@ -139,14 +139,13 @@ Example :
 $name speech # record audio and generate text
 $name speech somefile.ogg"
 
-
     exit 0
 }
 
 function writeConfig() {
     echo "API_KEY=";
     echo "API_ROUTE=https://api.openai.com/v1";
-    echo "TEXT_MODEL=gpt-3.5-turbo";
+    echo "TEXT_MODEL=gpt-4";
     echo "TEXT_TEMP=0.7";
     echo "IMAGE_MODEL=dall-e-3";
     echo "IMAGE_NB=1";
@@ -194,14 +193,14 @@ function checkDependencies() {
 
 function verification() {
     [ -z "$API_KEY" ] && echo_err "API_KEY is needed" && exit 1
-    [ -z "$TEXT_MODEL" ] && echo_err "Model is needed" && exit 1
     [ -z "$API_ROUTE" ] && echo_err "API_ROUTE is needed" && exit 1
-    [ -z "$TEXT_TEMP" ] && echo_err "Temperature is needed" && exit 1
+    [ -z "$TEXT_MODEL" ] && echo_err "Text model is needed" && exit 1
+    [ -z "$TEXT_TEMP" ] && echo_err "Text temperature is needed" && exit 1
     [ -z "$IMAGE_MODEL" ] && echo_err "Image model is needed" && exit 1
     [ -z "$IMAGE_NB" ] && echo_err "Number of image is needed" && exit 1
     [ -z "$IMAGE_SIZE" ] && echo_err "Size of image is needed" && exit 1
-    [ -z "$SPEECH_MODEL" ] && echo_err "Audio model is needed" && exit 1
-    [ -z "$SPEECH_LANG" ] && echo_err "Language is needed" && exit 1
+    [ -z "$SPEECH_MODEL" ] && echo_err "Speech model is needed" && exit 1
+    [ -z "$SPEECH_LANG" ] && echo_err "Speech language is needed" && exit 1
 }
 
 function readConfig() {
@@ -310,7 +309,7 @@ function sendImageGenerationRequest() {
 
 # sendSpeechRequest <file>
 function sendSpeechRequest() {
-    [ -z "$1" ] && echo_err "sendSpeechRequest : Parameter is required" && exit 1
+    [ -z "$1" ] && echo_err "sendSpeechRequest : Parameter is required" && rmTemp && exit 1
 
     local result=$(curl -s \
         -X POST "$API_ROUTE/audio/transcriptions" \
@@ -323,10 +322,11 @@ function sendSpeechRequest() {
     if echo "$result" | grep -q "error"; then
         local error=$(echo "$result" | jq -r '.error.message')
         echo_err "$error"
+        rmTemp
         exit 1
     fi
 
-    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && rmTemp && exit 1
 
     local text=$(echo "$result" | jq -r '.text')
     echo "$text"
