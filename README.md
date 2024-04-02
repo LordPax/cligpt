@@ -2,15 +2,20 @@
 
 ## Description
 
-A bash script that use openai or mistral api
+A bash script that use openai api to generate text, image and speech.
 
 ## Required Dependencies
+
+**general dependencies**
 
 * `jq`
 * `bat`
 * `curl`
+* `base64`
 
-Make sure these dependencies are installed before using CliGPT.
+**speech dependencies**
+
+* `pacat`
 
 ## Installation
 
@@ -29,22 +34,18 @@ cd cligpt
 
 3. Add your API key to `~/.config/cligpt/config`:
 
-**Openai**
+**Example**
 
 ```bash
 API_KEY=your-api-key
 API_ROUTE=https://api.openai.com/v1
-TEXT_MODEL=gpt-3.5-turbo
+TEXT_MODEL=gpt-4
 TEXT_TEMP=0.7
-```
-
-**Mistral**
-
-```
-API_KEY=your-api-key
-API_ROUTE=https://api.mistral.ai/v1
-TEXT_MODEL=mistral-medium
-TEXT_TEMP=0.7
+IMAGE_MODEL=dall-e-3
+IMAGE_NB=1
+IMAGE_SIZE=1024x1024
+SPEECH_MODEL=whisper-1
+SPEECH_LANG=fr
 ```
 
 ## Usage
@@ -132,6 +133,12 @@ cligpt speech somefile.mp3
 bind H new-window "cligpt text" \; rename-window "cligpt"
 ```
 
+## Vim plugin
+
+```vim
+Plug 'LordPax/vim-cligpt'
+```
+
 ## FAQ
 
 ### How do I get my OpenAI API key?
@@ -141,4 +148,3 @@ To get an OpenAI API key, you need to sign up on the OpenAI website and follow t
 ## Example
 
 [![asciicast](https://asciinema.org/a/568168.svg)](https://asciinema.org/a/568168)
-[![asciicast](https://asciinema.org/a/568170.svg)](https://asciinema.org/a/568170)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
-version="v2.1.0"
-name=$(basename "$0")
+version="v2.1.1"
+name="${0##*/}"
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
 historyPath="${config}/history"
@@ -29,7 +29,7 @@ function echo_info() {
 # echo_log <msg>
 function echo_log() {
     [ -z "$1" ] && exit 1
-    local date=$(date "+%Y-%m-%d %H:%M:%S")
+    local date=$(date '+%F %T')
     echo -e "[$date] $1" >> "$logPath"
 }
 
@@ -50,9 +50,7 @@ function input() {
 # randomString <length>
 function randomString() {
     [ -z "$1" ] && exit 1
-    tr -dc 'a-zA-Z0-9' < /dev/urandom | \
-        fold -w "$1" | \
-        head -n 1
+    tr -dc 'a-zA-Z0-9' < /dev/urandom | head -c "$1"
 }
 
 # rmTemp <tmpDirectory>
@@ -60,7 +58,7 @@ function rmTemp() {
     [ -z "$tempDir" ] && exit 0
     [ ! -d "$tempDir" ] && echo_err "rmTemp : Directory not found" && exit 1
     
-    ! echo "$tempDir" | grep -oqE "/tmp/tmp\.[a-zA-Z0-9]{10}" && \
+    ! echo "$tempDir" | grep -oqE "/tmp/tmp\.[a-zA-Z0-9]{10}" &&
         echo_err "rmTemp : Directory is not a temp directory" && exit 1
 
     rm -rf "$tempDir"
@@ -188,7 +186,7 @@ function checkDependencies() {
     fi
 
     for dependency in $deps; do
-        ! command -v "$dependency" > /dev/null 2>&1 && \
+        ! command -v "$dependency" > /dev/null 2>&1 &&
             echo_err "Dependency \"$dependency\" not found" && exit 1
     done
 }
@@ -245,7 +243,7 @@ function sendTextRequest() {
         -d "$data" | jq -c '.choices[0].message'
     )
 
-    [ "$result" == "null" ] || [ -z "$result" ] && \
+    [ "$result" == "null" ] || [ -z "$result" ] &&
         echo_err "Something wrong with API" && exit 1
 
     saveHistory "$result"
@@ -258,7 +256,7 @@ function sendTextRequest() {
 
 function listModel() {
     curl -s "$API_ROUTE/models" \
-        -H "Authorization: Bearer $API_KEY" | \
+        -H "Authorization: Bearer $API_KEY" |
         jq -r '.data[].id'
 }
 
@@ -272,9 +270,18 @@ function interactiveMode() {
 # systemText <text>
 function systemText() {
     [ -z "$1" ] && echo_err "systemText : Parameter is required" && exit 1
+
     local systemStr=$([ "$1" == "-" ] && cat /dev/stdin || echo "$1")
     local content=$(echo -n "$systemStr" | jq -Rs .)
-    saveHistory "{\"role\":\"system\",\"content\":$content}"
+    local data=$(jq -cn \
+        --argjson content "$content" '
+        {
+            role: "system",
+            content: $content
+        }'
+    )
+
+    saveHistory "$data"
 }
 
 # sendImageGenerationRequest <text>
@@ -283,7 +290,21 @@ function sendImageGenerationRequest() {
 
     local format=$([ -z "$output" ] && echo "url" || echo "b64_json")
     local content=$(echo -n "$1" | jq -Rs .)
-    local data="{\"model\":\"$IMAGE_MODEL\",\"prompt\":$content,\"n\":$IMAGE_NB,\"size\":\"$IMAGE_SIZE\",\"response_format\":\"$format\"}"
+    local data=$(jq -cn \
+        --arg model "$IMAGE_MODEL" \
+        --argjson prompt "$content" \
+        --argjson n "$IMAGE_NB" \
+        --arg size "$IMAGE_SIZE" \
+        --arg response_format "$format" '
+        {
+            model: $model,
+            prompt: $prompt,
+            n: $n,
+            size: $size,
+            response_format: $response_format
+        }'
+    )
+
     local result=$(curl -s \
         -X POST "$API_ROUTE/images/generations" \
         -H "Content-Type: application/json" \
@@ -297,7 +318,8 @@ function sendImageGenerationRequest() {
         exit 1
     fi
 
-    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && exit 1
+    [ "$result" == "null" ] || [ -z "$result" ] &&
+        echo_err "Something wrong with API" && exit 1
     local image=$(echo "$result" | jq -r ".data[].$format")
 
     if [ "$format" == "b64_json" ]; then
@@ -318,7 +340,8 @@ function sendSpeechRequest() {
         -H "Authorization: Bearer $API_KEY" \
         -H "Content-Type: multipart/form-data" \
         -F "file=@$1" \
-        -F "model=\"$SPEECH_MODEL\""
+        -F "model=\"$SPEECH_MODEL\"" \
+        -F "language=\"$SPEECH_LANG\""
     )
 
     if echo "$result" | grep -q "error"; then
@@ -328,7 +351,8 @@ function sendSpeechRequest() {
         exit 1
     fi
 
-    [ "$result" == "null" ] || [ -z "$result" ] && echo_err "Something wrong with API" && rmTemp && exit 1
+    [ "$result" == "null" ] || [ -z "$result" ] &&
+        echo_err "Something wrong with API" && rmTemp && exit 1
 
     local text=$(echo "$result" | jq -r '.text')
     echo "$text"
