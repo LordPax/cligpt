@@ -1,13 +1,13 @@
 #!/bin/bash
 
-version="v2.1.1"
+version="v2.2.0"
 name="${0##*/}"
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
 historyPath="${config}/history"
 logPath="${config}/log"
 dependencies="curl jq bat base64"
-speechDependencies="pacat" # Change this if you want to use another audio recorder
+speechDependencies="pacat zenity" # Change this if you want to use another audio recorder
 tempDir=""
 quiet=0
 declare chatHistory
@@ -73,6 +73,8 @@ Option :
 -l or --list ........................... List all available model
 -i or --inerte ......................... Do nothing except saving prompt in history
 -q or --quiet .......................... Quiet mode
+-c or --clipboard ...................... Save result in clipboard
+-g or --gui ............................ Open GUI
 
 Command :
 text ................................... Generate text
@@ -250,6 +252,12 @@ function sendTextRequest() {
     local role=$(echo "$result" | jq -r '.role')
     local content=$(echo "$result" | jq -r '.content')
 
+    if [ $clipboard -eq 1 ]; then
+        echo -n "$content" | xsel --clipboard -i
+        echo_info "Text copied to clipboard"
+        exit 0
+    fi
+
     [ "$format" -eq 1 ] && echo -e "\n\e[31m$role>\e[0m"
     echo "$content" | bat -p -l md
 }
@@ -282,6 +290,27 @@ function systemText() {
     )
 
     saveHistory "$data"
+}
+
+# infoRecord <msg>
+function infoRecord() {
+    [ -z "$1" ] && exit 1
+    zenity --info --text="$1" --title="Info" && pkill pacat
+}
+
+function recordVoice() {
+    local randomName=$(randomString 10)
+    tempDir=$(mktemp -d)
+    file="$tempDir/${randomName}.ogg"
+
+    if [ $gui -eq 1 ]; then
+        infoRecord "Recording audio (Ok to stop) ..." &
+    elif [ $quiet -eq 0 ]; then
+        echo "Recording audio (Ctrl+C to stop) ..." > /dev/stderr
+    fi
+
+    # Change this command if you want to use another audio recorder
+    pacat --file-format=oga -r "$file"
 }
 
 # sendImageGenerationRequest <text>
@@ -355,6 +384,13 @@ function sendSpeechRequest() {
         echo_err "Something wrong with API" && rmTemp && exit 1
 
     local text=$(echo "$result" | jq -r '.text')
+
+    if [ $clipboard -eq 1 ]; then
+        echo -n "$text" | xsel --clipboard -i
+        echo_info "Text copied to clipboard"
+        exit 0
+    fi
+
     echo "$text"
 }
 
@@ -439,7 +475,6 @@ function imageCommand() {
 function speechCommand() {
     checkDependencies speech
 
-    local randomName=$(randomString 10)
     local file=""
 
     for _ in $(seq 1 $#); do
@@ -466,16 +501,7 @@ function speechCommand() {
     verification
 
     [ $inerte -eq 1 ] && exit 0
-
-    if [ -z "$file" ]; then
-        tempDir=$(mktemp -d)
-        file="$tempDir/${randomName}.ogg"
-        [ $quiet -eq 0 ] && echo "Recording audio (Ctrl+C to stop) ..." > /dev/stderr
-
-        # Change this command if you want to use another audio recorder
-        pacat --file-format=oga -r "$file"
-    fi
-
+    [ -z "$file" ] && recordVoice
     [ ! -f "$file" ] && echo_err "File not found" && rmTemp && exit 1
 
     sendSpeechRequest "$file"
@@ -485,6 +511,8 @@ function speechCommand() {
 function main() {
     local text=""
     local inerte=0
+    local clipboard=0
+    local gui=0
 
     for _ in $(seq 1 $#); do
         case $1 in
@@ -500,6 +528,10 @@ function main() {
                 inerte=1;;
             -q | --quiet)
                 quiet=1;;
+            -c | --clipboard)
+                clipboard=1;;
+            -g | --gui)
+                gui=1;;
             text)
                 shift
                 textCommand "$@"
