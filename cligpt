@@ -1,6 +1,6 @@
 #!/bin/bash
 
-version="v2.2.1"
+version="v2.3.0"
 name="${0##*/}"
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
@@ -107,7 +107,7 @@ speech ................................. Generate text from speech"
 }
 
 function helpText() {
-    echo -e $"Usage : $name [generalOption] text [option] [prompt]
+    echo -e $"Usage : $name [generalOption] text [option] [prompt|-]
 
 Option :
 -h or --help ........................... Show help text command
@@ -120,6 +120,7 @@ Option :
 Example :
 $name text # Interactive mode
 $name text \"some prompt with role user\"
+echo \"some prompt with role user\" | $name text -
 cat somefile.txt | $name text -s - # Instruction mode
 cat somefile.txt | $name text -s - \"some prompt with role user\"
 $name text -s \"some prompt with role system\" \"some prompt with role user\""
@@ -128,7 +129,7 @@ $name text -s \"some prompt with role system\" \"some prompt with role user\""
 }
 
 function helpImage() {
-    echo -e $"Usage : $name [generalOption] image [option] <prompt>
+    echo -e $"Usage : $name [generalOption] image [option] <prompt|->
 
 Option :
 -h or --help ........................... Show help image command
@@ -146,6 +147,7 @@ Size :
 
 Example :
 $name image \"some prompt\"
+echo \"some prompt\" | $name image -
 $name image -o image.png \"some prompt\""
 
     exit 0
@@ -437,12 +439,14 @@ function textCommand() {
             -s | --system)
                 systemText "$2"
                 shift;;
+            -)
+                prompt=$(cat /dev/stdin);;
             "") ;;
             -*)
                 echo_err $"Unknown parameter \"$1\""
                 exit 1;;
             *)
-                text=$1
+                prompt=$1
                 shift
         esac
         shift
@@ -451,9 +455,9 @@ function textCommand() {
     verification
 
     [ $inerte -eq 1 ] && exit 0
-    [ -z "$text" ] && interactiveMode && exit 0
+    [ -z "$prompt" ] && interactiveMode && exit 0
 
-    sendTextRequest "$text"
+    sendTextRequest "$prompt"
 }
 
 function imageCommand() {
@@ -475,12 +479,14 @@ function imageCommand() {
             -o | --output)
                 output=$2
                 shift;;
+            -)
+                prompt=$(cat /dev/stdin);;
             "") ;;
             -*)
                 echo_err $"Unknown parameter \"$1\""
                 exit 1;;
             *)
-                text=$1
+                prompt=$1
                 shift
         esac
         shift
@@ -489,9 +495,9 @@ function imageCommand() {
     verification
 
     [ $inerte -eq 1 ] && exit 0
-    [ -z "$text" ] && echo_err "Image prompt is needed" && exit 1
+    [ -z "$prompt" ] && echo_err "Image prompt is needed" && exit 1
 
-    sendImageGenerationRequest "$text"
+    sendImageGenerationRequest "$prompt"
 }
 
 
@@ -533,7 +539,7 @@ function speechCommand() {
 
 function main() {
     local quiet=0
-    local text=""
+    local prompt=""
     local inerte=0
     local clipboard=0
 
