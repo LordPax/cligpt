@@ -114,8 +114,8 @@ Size :
 - 1792x1024
 
 Example :
-cligpt image "some prompt with role user"
-cligpt image -o image.png "some prompt with role user"
+cligpt image "some prompt"
+cligpt image -o image.png "some prompt"
 ```
 
 * speech help
@@ -130,7 +130,8 @@ Option :
 
 Example :
 cligpt speech # record audio and generate text
-cligpt speech somefile.mp3
+cligpt speech somefile.ogg
+cligpt -c -g speech
 ```
 
 ## Integration with tmux
