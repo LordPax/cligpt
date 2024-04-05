@@ -1,36 +1,58 @@
 #!/bin/bash
 
-version="v2.2.0"
+version="v2.2.1"
 name="${0##*/}"
 config="${HOME}/.config/cligpt"
 dotenv="${config}/config"
 historyPath="${config}/history"
 logPath="${config}/log"
-dependencies="curl jq bat base64"
-speechDependencies="pacat zenity" # Change this if you want to use another audio recorder
+dependencies="curl jq bat xsel notify-send"
+speechDependencies="pacat zenity"
 tempDir=""
-quiet=0
+gui=0
 declare chatHistory
-
-# echo_err <msg>
-function echo_err() {
-    [ -z "$1" ] && exit 1
-    echo "ERROR : $1" > /dev/stderr
-    echo_log "ERROR : $1"
-}
-
-# echo_info <msg>
-function echo_info() {
-    [ -z "$1" ] && exit 1
-    echo "$1"
-    echo_log "$1"
-}
 
 # echo_log <msg>
 function echo_log() {
     [ -z "$1" ] && exit 1
     local date=$(date '+%F %T')
     echo -e "[$date] $1" >> "$logPath"
+}
+
+# notify_info <msg>
+function notify_info() {
+    [ -z "$1" ] && exit 1
+    notify-send "Info" "$1"
+}
+
+# notify_error <msg>
+function notify_error() {
+    [ -z "$1" ] && exit 1
+    notify-send "Error" "$1"
+}
+
+# echo_err <msg>
+function echo_err() {
+    [ -z "$1" ] && exit 1
+
+    if [ $gui -eq 0 ]; then
+        echo "ERROR : $1" > /dev/stderr
+    else
+        notify_error "$1"
+    fi
+    echo_log "ERROR : $1"
+}
+
+# echo_info <msg>
+function echo_info() {
+    [ -z "$1" ] && exit 1
+
+    if [ $gui -eq 0 ]; then
+        echo "$1" > /dev/stderr
+    else
+        notify_info "$1"
+    fi
+    echo_log "$1"
 }
 
 function input() {
@@ -123,13 +145,13 @@ Size :
 - 1792x1024
 
 Example :
-$name image \"some prompt with role user\"
-$name image -o image.png \"some prompt with role user\""
+$name image \"some prompt\"
+$name image -o image.png \"some prompt\""
 
     exit 0
 }
 
-function helpTranscription() {
+function helpSpeech() {
     echo -e $"Usage : $name [generalOption] speech [option] [file]
 
 Option :
@@ -139,7 +161,8 @@ Option :
 
 Example :
 $name speech # record audio and generate text
-$name speech somefile.ogg"
+$name speech somefile.ogg
+$name -c -g speech"
 
     exit 0
 }
@@ -480,7 +503,7 @@ function speechCommand() {
     for _ in $(seq 1 $#); do
         case $1 in
             -h | --help)
-                helpTranscription;;
+                helpSpeech;;
             -m | --model)
                 SPEECH_MODEL=$2
                 shift;;
@@ -509,10 +532,10 @@ function speechCommand() {
 }
 
 function main() {
+    local quiet=0
     local text=""
     local inerte=0
     local clipboard=0
-    local gui=0
 
     for _ in $(seq 1 $#); do
         case $1 in

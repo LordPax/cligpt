@@ -12,10 +12,13 @@ A bash script that use openai api to generate text, image and speech.
 * `bat`
 * `curl`
 * `base64`
+* `xsel`
+* `notify-send`
 
 **speech dependencies**
 
 * `pacat`
+* `zenity`
 
 ## Installation
 
@@ -60,6 +63,9 @@ Option :
 -v or --version ........................ Show version
 -l or --list ........................... List all available model
 -i or --inerte ......................... Do nothing except saving prompt in history
+-q or --quiet .......................... Quiet mode
+-c or --clipboard ...................... Save result in clipboard
+-g or --gui ............................ Open GUI
 
 Command :
 text ................................... Generate text
@@ -129,14 +135,28 @@ cligpt speech somefile.mp3
 
 ## Integration with tmux
 
+Add the following line to your `.tmux.conf`:
+
 ```
 bind H new-window "cligpt text" \; rename-window "cligpt"
 ```
 
 ## Vim plugin
 
+You can find the vim plugin [here](https://github.com/LordPax/vim-cligpt)
+
+Add the following line to your `.vimrc`:
+
 ```vim
 Plug 'LordPax/vim-cligpt'
+```
+
+## Integration with i3
+
+Add the following line to your `~/.config/i3/config`:
+
+```
+bindsym $mod+s exec ~/path/to/cligpt -c -g speech
 ```
 
 ## FAQ
