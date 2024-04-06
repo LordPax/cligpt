@@ -76,7 +76,7 @@ speech ................................. Generate text from speech
 * text help
 
 ```
-Usage : cligpt [generalOption] text [option] [prompt]
+Usage : cligpt [generalOption] text [option] [prompt|-]
 
 Option :
 -h or --help ........................... Show help text command
@@ -89,6 +89,7 @@ Option :
 Example :
 cligpt text # Interactive mode
 cligpt text "some prompt with role user"
+echo "some prompt with role user" | cligpt text -
 cat somefile.txt | cligpt text -s - # Instruction mode
 cat somefile.txt | cligpt text -s - "some prompt with role user"
 cligpt text -s "some prompt with role system" "some prompt with role user"
@@ -97,7 +98,7 @@ cligpt text -s "some prompt with role system" "some prompt with role user"
 * image help
 
 ```
-Usage : cligpt [generalOption] image [option] <prompt>
+Usage : cligpt [generalOption] image [option] <prompt|->
 
 Option :
 -h or --help ........................... Show help image command
@@ -115,6 +116,7 @@ Size :
 
 Example :
 cligpt image "some prompt"
+echo "some prompt" | cligpt image -
 cligpt image -o image.png "some prompt"
 ```
 
