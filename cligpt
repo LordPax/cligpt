@@ -48,7 +48,7 @@ function echo_info() {
     [ -z "$1" ] && exit 1
 
     if [ $gui -eq 0 ]; then
-        echo "$1" > /dev/stderr
+        echo "$1"
     else
         notify_info "$1"
     fi
@@ -116,6 +116,7 @@ Option :
 -s or --system [text] .................. Instruction with role system (use \"-\" for stdin)
 -c or --clear .......................... Clear history
 -l or --list-history ................... List history
+--list-json-history .................... List history in json format
 
 Example :
 $name text # Interactive mode
@@ -203,6 +204,31 @@ function loadHistory() {
     while read -r line; do
         chatHistory+=("$line")
     done < "$historyPath"
+}
+
+# listHistory <0|1>
+# 0 : normal mode
+# 1 : quite mode
+function listHistory() {
+    [ -z "$1" ] && echo_err "listHistory : Parameter is required" && exit 1
+    [ $1 -eq 0 ] && [ ${#chatHistory[@]} -eq 0 ] &&
+        echo_info "History is empty" && exit 0
+
+    for i in ${!chatHistory[@]}; do
+        local hist=${chatHistory[$i]}
+        local role=$(echo "$hist" | jq -r '.role')
+        local content=$(echo "$hist" | jq -r '.content')
+
+        [ $i -ne 0 ] && printf "\n"
+
+        case $role in
+            "system") echo -e "\e[32msystem>\e[0m" ;;
+            "user") echo -e "\e[34muser>\e[0m" ;;
+            "assistant") echo -e "\e[31massistant>\e[0m" ;;
+        esac
+
+        echo "$content" | bat -p -l md
+    done
 }
 
 function checkDependencies() {
@@ -294,6 +320,7 @@ function listModel() {
 }
 
 function interactiveMode() {
+    listHistory 1
     while true; do
         printf "\n"
         sendTextRequest "$(input $'\e[34muser>\e[0m ')" 1
@@ -434,6 +461,9 @@ function textCommand() {
                 echo -n "" > "$historyPath"
                 exit 0;;
             -l | --list-history)
+                listHistory $quiet
+                exit 0;;
+            --list-json-history)
                 bat -p -l json "$historyPath"
                 exit 0;;
             -s | --system)

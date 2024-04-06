@@ -11,7 +11,6 @@ A bash script that use openai api to generate text, image and speech.
 * `jq`
 * `bat`
 * `curl`
-* `base64`
 * `xsel`
 * `notify-send`
 
@@ -85,6 +84,7 @@ Option :
 -s or --system [text] .................. Instruction with role system (use "-" for stdin)
 -c or --clear .......................... Clear history
 -l or --list-history ................... List history
+--list-json-history .................... List history in json format
 
 Example :
 cligpt text # Interactive mode
