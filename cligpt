@@ -211,15 +211,15 @@ function loadHistory() {
 # 1 : quite mode
 function listHistory() {
     [ -z "$1" ] && echo_err "listHistory : Parameter is required" && exit 1
-    [ $1 -eq 0 ] && [ ${#chatHistory[@]} -eq 0 ] &&
+    [ "$1" -eq 0 ] && [ ${#chatHistory[@]} -eq 0 ] &&
         echo_info "History is empty" && exit 0
 
-    for i in ${!chatHistory[@]}; do
+    for i in "${!chatHistory[@]}"; do
         local hist=${chatHistory[$i]}
         local role=$(echo "$hist" | jq -r '.role')
         local content=$(echo "$hist" | jq -r '.content')
 
-        [ $i -ne 0 ] && printf "\n"
+        [ "$i" -ne 0 ] && printf "\n"
 
         case $role in
             "system") echo -e "\e[32msystem>\e[0m" ;;
