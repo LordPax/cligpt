@@ -19,6 +19,10 @@ A bash script that use openai api to generate text, image and speech.
 * `pacat`
 * `zenity`
 
+**tts dependencies**
+
+* `paplay`
+
 ## Installation
 
 1. Clone the repository:
@@ -48,6 +52,36 @@ IMAGE_NB=1
 IMAGE_SIZE=1024x1024
 SPEECH_MODEL=whisper-1
 SPEECH_LANG=fr
+TTS_MODEL=tts-1-hd
+TTS_VOICE=alloy
+TTS_SPEED=1.0
+TTS_FORMAT=mp3
+```
+
+## Integration with tmux
+
+Add the following line to your `.tmux.conf`:
+
+```
+bind H new-window "cligpt text" \; rename-window "cligpt"
+```
+
+## Vim plugin
+
+You can find the vim plugin [here](https://github.com/LordPax/vim-cligpt)
+
+Add the following line to your `.vimrc`:
+
+```vim
+Plug 'LordPax/vim-cligpt'
+```
+
+## Integration with i3
+
+Add the following line to your `~/.config/i3/config`:
+
+```
+bindsym $mod+s exec ~/path/to/cligpt -c -g speech
 ```
 
 ## Usage
@@ -70,6 +104,7 @@ Command :
 text ................................... Generate text
 image .................................. Generate image
 speech ................................. Generate text from speech
+tts .................................... Generate speech from text
 ```
 
 * text help
@@ -136,30 +171,31 @@ cligpt speech somefile.ogg
 cligpt -c -g speech
 ```
 
-## Integration with tmux
-
-Add the following line to your `.tmux.conf`:
+* tts help
 
 ```
-bind H new-window "cligpt text" \; rename-window "cligpt"
-```
+Usage : cligpt [generalOption] tts [option] [text|-]
 
-## Vim plugin
+Option :
+-h or --help ........................... Show help tts command
+-m or --model <model> .................. Select model (default : tts-1-hd)
+-v or --voice <voice> .................. Select voice (default : alloy)
+-s or --speed <speed> .................. Select speed (default : 1.0)
+-f or --format <format> ................ Select format (default : mp3)
+-o or --output <name> .................. Get speech in file
 
-You can find the vim plugin [here](https://github.com/LordPax/vim-cligpt)
+Voice :
+- alloy
+- echo
+- fable
+- onyx
+- nova
+- shimmer
 
-Add the following line to your `.vimrc`:
-
-```vim
-Plug 'LordPax/vim-cligpt'
-```
-
-## Integration with i3
-
-Add the following line to your `~/.config/i3/config`:
-
-```
-bindsym $mod+s exec ~/path/to/cligpt -c -g speech
+Example :
+cligpt tts "some text" # play audio
+echo "some text" | cligpt tts -
+cligpt tts -o speech.mp3 "some text"
 ```
 
 ## FAQ
@@ -170,4 +206,4 @@ To get an OpenAI API key, you need to sign up on the OpenAI website and follow t
 
 ## Example
 
-[![asciicast](https://asciinema.org/a/568168.svg)](https://asciinema.org/a/568168)
+TODO : update example
