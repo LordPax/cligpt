@@ -347,7 +347,8 @@ function systemText() {
 # infoRecord <msg>
 function infoRecord() {
     [ -z "$1" ] && exit 1
-    zenity --info --text="$1" --title="Info" && pkill pacat
+    zenity --info --text="$1" --title="Info"
+    pkill pacat
 }
 
 function recordVoice() {
