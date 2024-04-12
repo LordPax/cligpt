@@ -601,6 +601,7 @@ function imageCommand() {
     [ $inerte -eq 1 ] && exit 0
     [ -z "$prompt" ] && echo_err "Image prompt is needed" && exit 1
 
+    echo_info "Generating image ..."
     sendImageGenerationRequest "$prompt"
 }
 
