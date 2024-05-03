@@ -245,7 +245,8 @@ function loadHistory() {
 # 1 : quiet mode
 function listHistory() {
     [ -z "$1" ] && echo_err "listHistory : Parameter is required" && exit 1
-    [ ${#chatHistory[@]} -eq 0 ] && echo_info "History is empty" && exit 0
+    [ ${#chatHistory[@]} -eq 0 ] && [ "$1" -eq 0 ] &&
+        echo_info "History is empty" && exit 0
 
     for i in "${!chatHistory[@]}"; do
         local hist=${chatHistory[$i]}
